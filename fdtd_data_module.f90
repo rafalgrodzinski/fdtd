@@ -1,13 +1,11 @@
-include "utils_module.f90"
-
-
 module fdtd_data_module
 use utils_module
 
 implicit none
 
 type fdtd_state
-    integer :: nx,ny,nz
+    !read from file
+    integer :: nx, ny, nz
     integer :: t_max
     integer :: nf
     character(len=128) :: rdirname
@@ -26,7 +24,17 @@ type fdtd_state
     integer :: ptype
     real :: fsigma, feps_s, feps_i, ftau_d
     real :: feps_m, ftau_2
-    real :: A
+    real :: a
+    
+    !generated
+    real :: pi = acos(-1.0) !Delicious pie
+    real :: c = 3.0*10.0**8 !Light speed (v in m/s)
+    real :: timeskip !Time step skip
+    real :: lambda !Wave length (meters)
+    real :: dt !Length of the time step
+    real :: dx, dy, dz !Distance between 2 cells
+    real :: mu_0 !mu0, permeability of free space (in henry/meter)
+    real :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
 end type
 
 
@@ -91,7 +99,7 @@ subroutine init_fdtd_state(state, file_name)
     read(51, *, iostat=error_code) dummy_char, state%pmodufreq
     read(51, *, iostat=error_code) dummy_char, state%nsrc
 
-    allocate (state%src(0:state%nsrc-1, 0:2))
+    allocate (state%src(0:state% nsrc-1, 0:2))
 
     do i = 0, state%nsrc-1
       read(51, *, iostat=error_code) dummy_char, state%src(i,0:2)
@@ -107,6 +115,18 @@ subroutine init_fdtd_state(state, file_name)
     read(51, *, iostat=error_code) dummy_char, state%ftau_2
 
     read(51, *, iostat=error_code) dummy_char, state%A
+    
+    !generate rest of the values
+    state%timeskip = 1.0
+    state%lambda   = state%c / state%w_freq
+    state%dt       = 1.0d0 * state%timeskip / (state%c * sqrt(1.0d0/(state%dx**2) + &
+                     1.0d0/(state%dy**2) + &
+                     1.0d0/(state%dz**2)))
+    state%dx = state%lambda/state%elem_lambda
+    state%dy = state%dx
+    state%dz = state%dx
+    state%mu_0     = 4*state%pi*10**(-7.0)
+    state%eps_0    = 1.0/(state%mu_0 * state%c * state%c)
 end
 
 
@@ -120,6 +140,90 @@ end
 subroutine init_fdtd_field(field, state)
     type(fdtd_field), pointer, intent(inout) :: field
     type(fdtd_state), pointer, intent(in)    :: state
+    
+    allocate(field)
+    
+    allocate(field%ex1(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%ex2(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%ex3(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%ey1(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%ey2(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%ey3(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%ez1(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%ez2(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%ez3(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%hx(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%hy(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%hz(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%dx1(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%dx2(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%dx3(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%dy1(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%dy2(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%dy3(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%dz1(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%dz2(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%dz3(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%eps_i(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%eps_s(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%tau_d(1:state%nx, 1:state%ny, 1:state%nz))
+    allocate(field%sigma(1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%rp_x_1(1:2, 1:state%ny, 1:state%nz))
+    allocate(field%rp_x_end(state%nx-1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%rp_y_1(1:state%nx, 1:2, 1:state%nz))
+    allocate(field%rp_y_end(1:state%nx, state%ny-1:state%ny, 1:state%nz))
+
+    allocate(field%rp_z_1(1:state%nx, 1:state%ny, 1:2))
+
+    allocate(field%rp_z_end(1:state%nx, 1:state%ny, state%nz-1:state%nz))
+    
+    field%ex1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%ex2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%ex3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%ey1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%ey2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%ey3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%ez1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%ez2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%ez3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%hx(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%hy(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%hz(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%dx1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%dx2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%dx3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%dy1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%dy2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%dy3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%dz1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%dz2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%dz3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    field%eps_i(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%eps_s(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%tau_d(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    field%sigma(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    
+    field%sigma(1:state%nx, 1:state%ny, 1:state%nz) = state%fsigma
+    field%eps_s(1:state%nx, 1:state%ny, 1:state%nz) = state%feps_s
+    field%eps_i(1:state%nx, 1:state%ny, 1:state%nz) = state%feps_i
+    field%tau_d(1:state%nx, 1:state%ny, 1:state%nz) = state%ftau_d
 end
 
 

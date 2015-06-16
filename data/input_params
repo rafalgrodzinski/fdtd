@@ -1,0 +1,37 @@
+nx_ny_nz: 265 490 200 
+t_max: 10
+nf: 1
+env_set_dir: "../pgmdata/"
+env_file_prefix: "ver"
+output_dir: "./"
+output_format: "txt"
+impulse_resp_flag: 0
+pec_flag: 0
+read_env_flag: 0
+output_flag: 1
+bzip2_flag: 0
+output_start: 0 0 0
+output_finish: 0 0 0
+source_type:  soft
+elements_per_wavelength: 100
+wave_frequency: 3.0D9
+pulse_width: 0.5
+pulse_modulation_frequency: 0
+number_of_excitation_sources: 1
+source_location: 132 245 92
+pulse_type: 2
+fsigma: 0
+feps_s: 1
+feps_inf: 1
+ftau_d: 0
+feps_m: 1.0
+ftau_2: 0 .0
+alpha: 0.1
+
+! Three parameters are not used: output_start, output_finish, pulse_type
+
+! Flag values: 1 -- yes, 0 -- no
+
+! env_file_prefix -- radio environment input file prefix, 
+!   describes name body of environment file prefix = human|norman|demo
+!   e.g. file name: <prefix><XY-slice>.pgm
