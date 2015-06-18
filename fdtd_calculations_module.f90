@@ -6,11 +6,11 @@ implicit none
 
 contains
 
-subroutine update_h_field(field, state, run_num)
+subroutine update_h_field(state, field, run_num)
     !input
-    type(fdtd_field), pointer, intent(inout) :: field
-    type(fdtd_state), pointer, intent(in)    :: state
-    integer, intent(in)                      :: run_num
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field
+    integer, intent(in)                   :: run_num
     !local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: ex_field
@@ -79,11 +79,11 @@ subroutine update_h_field(field, state, run_num)
 end
 
 
-subroutine update_d_field(field, state, run_num)
+subroutine update_d_field(state, field, run_num)
     !input
-    type(fdtd_field), pointer, intent(inout) :: field
-    type(fdtd_state), pointer, intent(in)    :: state
-    integer, intent(in)                      :: run_num
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field
+    integer, intent(in)                   :: run_num
     !local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: dx_target
@@ -162,11 +162,11 @@ subroutine update_d_field(field, state, run_num)
 end
 
 
-subroutine update_e_field(field, state, run_num)
+subroutine update_e_field(state, field, run_num)
     !input
-    type(fdtd_field), pointer, intent(inout) :: field
-    type(fdtd_state), pointer, intent(in)    :: state
-    integer, intent(in)                      :: run_num
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field
+    integer, intent(in)                   :: run_num
     !local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: ex_target
@@ -361,6 +361,41 @@ subroutine update_e_field(field, state, run_num)
             end do
 	    end do
     end do
+end
+
+
+subroutine update_source(state, field, run_num)
+    !input
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field
+    integer, intent(in)                   :: run_num
+    !local vars
+    integer :: i
+    real, dimension(:,:,:), pointer :: dz_target
+    real, dimension(:,:,:), pointer :: dz_source
+    
+    !setup based on run_num 0..2
+    if(run_num .eq. 0) then
+        dz_target = field%dz1
+        dz_source = field%dz3
+    else if(run_num .eq. 1) then
+        dz_target = field%dz2
+        dz_source = field%dz1
+    else
+        dz_target = field%dz3
+        dz_source = field%dz2
+    end if
+    
+    !Update source
+    !do i=0, state%nsrc-1
+    !    dz_target(state%src(i, 0), state%src(i,1), state%src(i,2)) =                           &
+    !        dz_source(state%src(i, 0), state%src(i, 1), state%src(i, 2)) +                     &
+    !        state%dt/state%dx * (field%hy(state%src(i, 0), state%src(i, 1), state%src(i, 2)) - &
+    !        field%hy(state%src(i, 0)-1, state%src(i, 1), state%src(i, 2))) -                   &
+    !        state%dt/state%dy * (field%hx(state%src(n, 0), state%src(n, 1), state%src(n, 2)) - &
+    !        field%hx(state%src(i, 0), state%src(i, 1)-1, state%src(i, 2))) -                   &
+    !        jz(int(((t-1)*3)+1))
+    !enddo
 end
 
 end

@@ -138,6 +138,7 @@ end
 
 
 subroutine init_fdtd_field(field, state)
+    !input
     type(fdtd_field), pointer, intent(inout) :: field
     type(fdtd_state), pointer, intent(in)    :: state
     
@@ -229,6 +230,68 @@ end
 
 subroutine delete_fdtd_field(field)
     type(fdtd_field), pointer, intent(inout) :: field
+end
+
+
+subroutine load_materials(state, field, specs_file_name, materials_path)
+    !input
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field  
+    character(len=*), intent(in)          :: specs_file_name
+    character(len=*), intent(in)          :: materials_path
+    !local vars
+    integer, parameter                :: file_unit = 100
+    integer                           :: error_code
+    real, dimension(:,:), allocatable :: specs
+    integer, parameter                :: specs_count = 94
+    integer                           :: spec_code
+    character                         :: dummy_char
+    integer                           :: ix, iy, iz
+    character(len=128)                :: material_file_name
+    integer                           :: material_width, material_height
+    
+    allocate(specs(0:specs_count, 0:3))
+    specs = 0.0
+    
+    !load material specs
+    open(file_unit, file=specs_file_name, status="old", iostat=error_code)
+    call check_error(error_code, "Couldn't open file "//specs_file_name)
+    
+    spec_code = 0
+    do while(spec_code .lt. specs_count)
+        read(file_unit, *) spec_code, dummy_char, specs(spec_code, 0:3)
+    end do
+    
+    close(unit=file_unit)
+    
+    !load materials
+    do iz=0, state%nz-1
+        !generte file name, starting with v1_00001.pgm
+        write(material_file_name, fmt='(I5)'), iz+1
+        material_file_name = "0000" // adjustl(material_file_name)
+        material_file_name = material_file_name(len(trim(material_file_name))-4 : len(trim(material_file_name)))
+        material_file_name = materials_path // "v1_" // trim(material_file_name) // ".pgm"
+    
+        open(unit=file_unit, file=material_file_name, status="old", iostat=error_code)
+        call check_error(error_code, "Couldn't open file "//material_file_name)
+        
+        read(file_unit, *) dummy_char, dummy_char, dummy_char, material_width, material_height, dummy_char
+        
+        do iy=0, state%ny-1
+            do ix=0, state%nx-1
+                read(file_unit, *) spec_code
+            
+                field%sigma(ix, iy, iz) = specs(spec_code, 0)
+                field%eps_s(ix, iy, iz) = specs(spec_code, 1)
+                field%eps_i(ix, iy, iz) = specs(spec_code, 2)
+                field%tau_d(ix, iy, iz) = specs(spec_code, 3)
+            end do
+        end do
+        
+        close(unit=file_unit)
+    end do
+    
+    deallocate(specs)
 end
 
 end
