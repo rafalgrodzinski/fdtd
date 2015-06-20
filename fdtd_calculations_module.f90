@@ -458,7 +458,7 @@ subroutine update_mur_boundary(state, field, run_num)
     
     iy=state%ny
     do iz=2, state%nz-1
-        do ix=1, nx-1
+        do ix=1, state%nx-1
             ex_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
                                     (                                                                                        &
                                      (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
@@ -466,7 +466,7 @@ subroutine update_mur_boundary(state, field, run_num)
                                      (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
                                      ex_source(ix, iy-1, iz) -                                                               &
                                      (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
-                                     ex_source(ix, iy, iz)
+                                     ex_source(ix, iy, iz)                                                                   &
                                     )
         end do
     end do
@@ -475,13 +475,13 @@ subroutine update_mur_boundary(state, field, run_num)
     do iy=2, state%ny-1
         do ix=1, state%nx-1
             ex_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
-                                    ( &
+                                    (                                                                                      &
                                      (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
-                                     ex_target(ix, iy, iz+1) + &
+                                     ex_target(ix, iy, iz+1) +                                                             &
                                      (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
-                                     ex_source(ix, iy, iz+1) - &
+                                     ex_source(ix, iy, iz+1) -                                                             &
                                      (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
-                                     ex_source(ix, iy, iz)
+                                     ex_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
@@ -494,9 +494,9 @@ subroutine update_mur_boundary(state, field, run_num)
                                      (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
                                      ex_target(ix, iy, iz-1) +                                                               &
                                      (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
-                                     ex_source(i,j,k-1) -                                                                    &
+                                     ex_source(ix, iy, iz-1) -                                                               &
                                      (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *   & 
-                                     ex_source(ix, iy, iz)
+                                     ex_source(ix, iy, iz)                                                                   &
                                     )
         end do
     end do
@@ -510,9 +510,9 @@ subroutine update_mur_boundary(state, field, run_num)
                                      (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
                                      ey_target(ix+1, iy, iz) +                                                             &
                                      (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
-                                     ey_source(i+1,j,k) -                                                                  &
+                                     ey_source(ix+1, iy, iz) -                                                             &
                                      (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *   &
-                                     ey_source(ix, iy, iz)
+                                     ey_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
@@ -528,7 +528,7 @@ subroutine update_mur_boundary(state, field, run_num)
                                      ey_source(ix-1, iy, iz) -                                                               &
                                      (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
                                      ey_source(ix, iy, iz)                                                                   &
-                                    )                                                                                        &
+                                    )
         end do
     end do
       
@@ -537,17 +537,17 @@ subroutine update_mur_boundary(state, field, run_num)
         do ix=2, state%nx-1
             ey_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * feidl%rp_z_1(ix, iy, iz+1))) * &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
                                      ey_target(ix, iy,iz+1) +                                                              &
                                      (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
                                      ey_source(ix, iy, iz+1) -                                                             &
                                      (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
                                      ey_source(ix, iy, iz)                                                                 &
-                                    )                                                                                      &
+                                    )
         end do
     end do
       
-    iz=nz
+    iz=state%nz
     do iy=1, state%ny-1
         do ix=2, state%nx-1
             ey_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
@@ -558,7 +558,7 @@ subroutine update_mur_boundary(state, field, run_num)
                                      ey_source(ix, iy, iz-1) -                                                               &
                                      (state%dt - state%dz *sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *    &     
                                      ey_source(ix, iy, iz)                                                                   &
-                                    )                                                                                        &
+                                    )
         end do
     end do
     
@@ -568,13 +568,13 @@ subroutine update_mur_boundary(state, field, run_num)
         do iy=2, state%ny-1
             ez_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(xi+1, iy, iz))) * & 
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * & 
                                      ez_target(ix+1, iy, iz) +                                                             &
                                      (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
                                      ez_source(ix+1, iy, iz) -                                                             & 
                                      (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz)))  *  &
                                      ez_source(ix, iy, iz)                                                                 &
-                                    )                                                                                      &
+                                    )
 
         end do
     end do
@@ -590,7 +590,7 @@ subroutine update_mur_boundary(state, field, run_num)
                                      ez_source(ix-1, iy, iz) -                                                               &
                                      (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
                                      ez_source(ix, iy, iz)                                                                   &
-                                    )                                                                                        &
+                                    )
          end do
       end do
       
@@ -604,12 +604,12 @@ subroutine update_mur_boundary(state, field, run_num)
                                      (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
                                      ez_source(ix, iy+1, iz) -                                                             &
                                      (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *   &
-                                     ez_source(ix, iy, iz)
+                                     ez_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
       
-    iy=ny
+    iy=state%ny
     do iz=1, state%nz-1
         do ix=2, state%nx-1
             ez_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
@@ -620,7 +620,7 @@ subroutine update_mur_boundary(state, field, run_num)
                                      ez_source(ix, iy-1, iz) -                                                               &
                                      (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
                                      ez_source(ix, iy, iz)                                                                   &
-                                    )                                                                                        &
+                                    )
         end do
     end do
 end

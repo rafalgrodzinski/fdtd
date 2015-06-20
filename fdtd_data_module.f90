@@ -53,10 +53,9 @@ type fdtd_field
 
     real, dimension(:,:,:), allocatable :: eps_i, eps_s
     real, dimension(:,:,:), allocatable :: tau_d, sigma
-
+    !mur boundary
     real, dimension(:,:,:), allocatable :: rp_x_1, rp_x_end
     real, dimension(:,:,:), allocatable :: rp_y_1, rp_y_end
-
     real, dimension(:,:,:), allocatable :: rp_z_1, rp_z_end
 end type
 
@@ -141,6 +140,8 @@ subroutine init_fdtd_field(field, state)
     !input
     type(fdtd_field), pointer, intent(inout) :: field
     type(fdtd_state), pointer, intent(in)    :: state
+    !local vars
+    integer :: ix, iy, iz
     
     allocate(field)
     
@@ -177,16 +178,6 @@ subroutine init_fdtd_field(field, state)
 
     allocate(field%tau_d(1:state%nx, 1:state%ny, 1:state%nz))
     allocate(field%sigma(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%rp_x_1(1:2, 1:state%ny, 1:state%nz))
-    allocate(field%rp_x_end(state%nx-1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%rp_y_1(1:state%nx, 1:2, 1:state%nz))
-    allocate(field%rp_y_end(1:state%nx, state%ny-1:state%ny, 1:state%nz))
-
-    allocate(field%rp_z_1(1:state%nx, 1:state%ny, 1:2))
-
-    allocate(field%rp_z_end(1:state%nx, 1:state%ny, state%nz-1:state%nz))
     
     field%ex1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
     field%ex2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
@@ -225,6 +216,95 @@ subroutine init_fdtd_field(field, state)
     field%eps_s(1:state%nx, 1:state%ny, 1:state%nz) = state%feps_s
     field%eps_i(1:state%nx, 1:state%ny, 1:state%nz) = state%feps_i
     field%tau_d(1:state%nx, 1:state%ny, 1:state%nz) = state%ftau_d
+    
+    !Initialise mur boundary
+    allocate(field%rp_x_1(1:2, 1:state%ny, 1:state%nz))
+    allocate(field%rp_x_end(state%nx-1:state%nx, 1:state%ny, 1:state%nz))
+
+    allocate(field%rp_y_1(1:state%nx, 1:2, 1:state%nz))
+    allocate(field%rp_y_end(1:state%nx, state%ny-1:state%ny, 1:state%nz))
+
+    allocate(field%rp_z_1(1:state%nx, 1:state%ny, 1:2))
+    allocate(field%rp_z_end(1:state%nx, 1:state%ny, state%nz-1:state%nz))
+    
+    !Setup rp_x
+    field%rp_x_1(1:2, 1:state%ny, 1:state%nz) = 0.0
+    field%rp_x_end(state%nx-1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+
+    do iz=1, state%nz
+        do iy=1, state%ny
+            do ix=1, 2
+                field%rp_x_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                    &
+                                            (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                            &
+                                            (1 + cmplx(0.0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy,iz))) -         &
+                                            cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            end do
+	    end do
+    end do
+
+    do iz=1, state%nz
+	    do iy=1, state%ny
+            do ix=state%nx-1, state%nx 
+                field%rp_x_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
+                                                  (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            end do
+	    end do
+    end do
+    
+    !Setup rp_y
+    field%rp_y_1(1:state%nx, 1:2, 1:state%nz) = 0.0
+    field%rp_y_end(1:state%nx, state%ny-1:state%ny, 1:state%nz) = 0.0
+
+    do iz=1, state%nz
+	    do iy=1, 2 
+            do ix=1, state%nx 
+                field%rp_y_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                &
+                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                    &
+                                                (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) -  &
+                                                cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            end do
+	    end do
+    end do
+
+
+    do iz=1, state%nz
+	    do iy=state%ny-1, state%ny
+            do ix=1, state%nx 
+                field%rp_y_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
+                                                  (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            end do
+	    end do
+    end do
+    
+    !Setup rp_z
+    field%rp_z_1(1:state%nx, 1:state%ny, 1:2) = 0.0
+    field%rp_z_end(1:state%nx, 1:state%ny, state%nz-1:state%nz) = 0.0
+
+    do iz=1, 2 
+	    do iy=1, state%ny
+            do ix=1, state%nx
+                field%rp_z_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
+                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
+                                                (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
+                                                cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            end do
+	    end do
+    end do
+
+    do iz=state%nz-1, state%nz 
+    	do iy=1, state%ny
+            do ix=1, state%nx
+                field%rp_z_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
+                                                  (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            end do
+	    end do
+    end do
 end
 
 
