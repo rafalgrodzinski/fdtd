@@ -364,11 +364,12 @@ subroutine update_e_field(state, field, run_num)
 end
 
 
-subroutine update_source(state, field, run_num)
+subroutine update_source(state, field, run_num, runs_count)
     !input
     type(fdtd_state), pointer, intent(in) :: state
     type(fdtd_field), pointer, intent(in) :: field
     integer, intent(in)                   :: run_num
+    integer, intent(in)                   :: runs_count
     !local vars
     integer :: i
     real, dimension(:,:,:), pointer :: dz_target
@@ -387,15 +388,15 @@ subroutine update_source(state, field, run_num)
     end if
     
     !Update source
-    !do i=0, state%nsrc-1
-    !    dz_target(state%src(i, 0), state%src(i,1), state%src(i,2)) =                           &
-    !        dz_source(state%src(i, 0), state%src(i, 1), state%src(i, 2)) +                     &
-    !        state%dt/state%dx * (field%hy(state%src(i, 0), state%src(i, 1), state%src(i, 2)) - &
-    !        field%hy(state%src(i, 0)-1, state%src(i, 1), state%src(i, 2))) -                   &
-    !        state%dt/state%dy * (field%hx(state%src(n, 0), state%src(n, 1), state%src(n, 2)) - &
-    !        field%hx(state%src(i, 0), state%src(i, 1)-1, state%src(i, 2))) -                   &
-    !        jz(int(((t-1)*3)+1))
-    !enddo
+    do i=0, state%nsrc-1
+        dz_target(state%src(i, 0), state%src(i,1), state%src(i,2)) =                           &
+            dz_source(state%src(i, 0), state%src(i, 1), state%src(i, 2)) +                     &
+            state%dt/state%dx * (field%hy(state%src(i, 0), state%src(i, 1), state%src(i, 2)) - &
+            field%hy(state%src(i, 0)-1, state%src(i, 1), state%src(i, 2))) -                   &
+            state%dt/state%dy * (field%hx(state%src(i, 0), state%src(i, 1), state%src(i, 2)) - &
+            field%hx(state%src(i, 0), state%src(i, 1)-1, state%src(i, 2))) -                   &
+            state%jz(int(((runs_count-1)*3)+1))
+    enddo
 end
 
 

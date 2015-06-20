@@ -35,6 +35,8 @@ type fdtd_state
     real :: dx, dy, dz !Distance between 2 cells
     real :: mu_0 !mu0, permeability of free space (in henry/meter)
     real :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
+    
+    real, dimension(:), allocatable :: jz
 end type
 
 
@@ -53,6 +55,7 @@ type fdtd_field
 
     real, dimension(:,:,:), allocatable :: eps_i, eps_s
     real, dimension(:,:,:), allocatable :: tau_d, sigma
+
     !mur boundary
     real, dimension(:,:,:), allocatable :: rp_x_1, rp_x_end
     real, dimension(:,:,:), allocatable :: rp_y_1, rp_y_end
@@ -135,6 +138,7 @@ subroutine delete_fdtd_state(state)
     type(fdtd_state), pointer, intent(inout) :: state
     
     deallocate(state%src)
+    deallocate(state%jz)
     deallocate(state)
 end
 
@@ -421,6 +425,58 @@ subroutine load_materials(state, field, specs_file_name, materials_path)
     end do
     
     deallocate(specs)
+end
+
+
+subroutine setup_source(state, field)
+    !input
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field
+    !local vars
+    integer :: fine
+    integer :: temp
+    integer :: i
+    integer :: istart
+    real, dimension(:), allocatable :: tmpdata, tmpdata2
+    
+    allocate(state%jz(-2**16:2**16))
+    allocate(tmpdata(-2**16:2**16))
+    allocate(tmpdata2(1:2**16))
+    
+    fine = int(2**13 * state%pwidth * state%w_freq * state%dt)
+
+    temp = 1/(state%pwidth * state%w_freq)/(state%dt / fine)/2
+
+    do i=-2**14, 2**14
+        tmpdata(i) = cmplx(0.0)
+    end do
+    
+    do i=-temp-1, temp+1
+        tmpdata(i)= exp(-(real(i) / ((real(temp) + 1.0) / 4.0))**2)
+    end do
+
+    do i=-temp-1, temp+1
+        tmpdata(i) = tmpdata(i) * cos(2.0 * acos(-1.0) * state%pmodufreq * state%w_freq*i*(state%dt/fine))     
+     enddo
+    
+    do i=-2**12, 2**12-1
+        if((abs(tmpdata(i)) .gt. 1e-9) .and. (mod(i, fine) .eq. 0)) then
+            istart = i 
+            exit
+        endif
+    enddo
+    
+    do i=istart, temp+1, fine
+        state%jz(i-istart+1) = tmpdata(i) * 10**(-15.0) / state%dt / 3.0
+    end do
+    
+    do i=istart+2, 2**14
+        state%jz(i) = 0 
+    end do
+    
+    do i=1, 2**14
+        state%jz(i) = tmpdata2(i)
+    end do
 end
 
 end
