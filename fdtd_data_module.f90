@@ -115,6 +115,8 @@ subroutine init_fdtd_state(state, file_name)
 
     read(51, *, iostat=error_code) dummy_char, state%A
     
+    close(file_unit)
+    
     !generate rest of the values
     state%timeskip = 1.0
     state%lambda   = state%c / state%w_freq
@@ -132,6 +134,7 @@ end
 subroutine delete_fdtd_state(state)
     type(fdtd_state), pointer, intent(inout) :: state
     
+    deallocate(state%src)
     deallocate(state)
 end
 
@@ -309,7 +312,53 @@ end
 
 
 subroutine delete_fdtd_field(field)
+    !input
     type(fdtd_field), pointer, intent(inout) :: field
+    
+    deallocate(field%ex1)
+    deallocate(field%ex2)
+    deallocate(field%ex3)
+
+    deallocate(field%ey1)
+    deallocate(field%ey2)
+    deallocate(field%ey3)
+
+    deallocate(field%ez1)
+    deallocate(field%ez2)
+    deallocate(field%ez3)
+
+    deallocate(field%hx)
+    deallocate(field%hy)
+    deallocate(field%hz)
+
+    deallocate(field%dx1)
+    deallocate(field%dx2)
+    deallocate(field%dx3)
+
+    deallocate(field%dy1)
+    deallocate(field%dy2)
+    deallocate(field%dy3)
+
+    deallocate(field%dz1)
+    deallocate(field%dz2)
+    deallocate(field%dz3)
+
+    deallocate(field%eps_i)
+    deallocate(field%eps_s)
+
+    deallocate(field%tau_d)
+    deallocate(field%sigma)
+    
+    deallocate(field%rp_x_1)
+    deallocate(field%rp_x_end)
+
+    deallocate(field%rp_y_1)
+    deallocate(field%rp_y_end)
+
+    deallocate(field%rp_z_1)
+    deallocate(field%rp_z_end)
+    
+    deallocate(field)
 end
 
 
