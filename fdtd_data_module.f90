@@ -250,24 +250,24 @@ subroutine load_materials(state, field, specs_file_name, materials_path)
     character(len=128)                :: material_file_name
     integer                           :: material_width, material_height
     
-    allocate(specs(0:specs_count, 0:3))
+    allocate(specs(1:specs_count, 1:4))
     specs = 0.0
     
     !load material specs
     open(file_unit, file=specs_file_name, status="old", iostat=error_code)
-    call check_error(error_code, "Couldn't open file "//specs_file_name)
+    call check_error(error_code, "Couldn't open file " // specs_file_name)
     
     spec_code = 0
     do while(spec_code .lt. specs_count)
-        read(file_unit, *) spec_code, dummy_char, specs(spec_code, 0:3)
+        read(file_unit, *) spec_code, dummy_char, specs(spec_code, 1:4)
     end do
     
     close(unit=file_unit)
     
     !load materials
-    do iz=0, state%nz-1
+    do iz=1, state%nz
         !generte file name, starting with v1_00001.pgm
-        write(material_file_name, fmt='(I5)'), iz+1
+        write(material_file_name, fmt='(I5)'), iz
         material_file_name = "0000" // adjustl(material_file_name)
         material_file_name = material_file_name(len(trim(material_file_name))-4 : len(trim(material_file_name)))
         material_file_name = materials_path // "v1_" // trim(material_file_name) // ".pgm"
@@ -277,14 +277,14 @@ subroutine load_materials(state, field, specs_file_name, materials_path)
         
         read(file_unit, *) dummy_char, dummy_char, dummy_char, material_width, material_height, dummy_char
         
-        do iy=0, state%ny-1
-            do ix=0, state%nx-1
+        do iy=1, state%ny
+            do ix=1, state%nx
                 read(file_unit, *) spec_code
             
-                field%sigma(ix, iy, iz) = specs(spec_code, 0)
-                field%eps_s(ix, iy, iz) = specs(spec_code, 1)
-                field%eps_i(ix, iy, iz) = specs(spec_code, 2)
-                field%tau_d(ix, iy, iz) = specs(spec_code, 3)
+                field%sigma(ix, iy, iz) = specs(spec_code, 1)
+                field%eps_s(ix, iy, iz) = specs(spec_code, 2)
+                field%eps_i(ix, iy, iz) = specs(spec_code, 3)
+                field%tau_d(ix, iy, iz) = specs(spec_code, 4)
             end do
         end do
         

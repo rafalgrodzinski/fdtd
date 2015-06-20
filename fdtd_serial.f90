@@ -29,17 +29,20 @@ implicit none
     !    call update_d_field(state, field, 0)
     !    call update_source(state, field, 0)
     !    call update_e_field(state, field, 0)
+    !    call update_mur_boundary(state, field, 0)
         
         !second run
     !    call update_h_field(state, field, 1)
     !    call update_d_field(state, field, 1)
     !    call update_source(state, field, 1)
     !    call update_e_field(state, field, 1)
+    !    call update_mur_boundary(state, field, 1)
         
         !third run
     !    call update_h_field(state, field, 2)
     !    call update_d_field(state, field, 2)
     !    call update_source(state, field, 2)
     !    call update_e_field(state, field, 2)
+    !    call update_mur_boundary(state, field, 2)
     !end do
 end program

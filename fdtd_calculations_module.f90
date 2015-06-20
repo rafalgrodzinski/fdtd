@@ -398,4 +398,231 @@ subroutine update_source(state, field, run_num)
     !enddo
 end
 
+
+subroutine update_mur_boundary(state, field, run_num)
+    !input
+    type(fdtd_state), pointer, intent(in) :: state
+    type(fdtd_field), pointer, intent(in) :: field
+    integer, intent(in)                   :: run_num
+    !local vars
+    real, dimension(:,:,:), pointer :: ex_target
+    real, dimension(:,:,:), pointer :: ey_target
+    real, dimension(:,:,:), pointer :: ez_target
+    real, dimension(:,:,:), pointer :: ex_source
+    real, dimension(:,:,:), pointer :: ey_source
+    real, dimension(:,:,:), pointer :: ez_source
+    integer :: ix, iy, iz
+    
+    !Setup based on run_num 0..2
+    if(run_num .eq. 0) then
+        ex_target => field%ex1
+        ey_target => field%ey1
+        ez_target => field%ez1
+        
+        ex_source => field%ex3
+        ey_source => field%ey3
+        ez_source => field%ez3
+    else if(run_num .eq. 1) then
+        ex_target => field%ex2
+        ey_target => field%ey2
+        ez_target => field%ez2
+        
+        ex_source => field%ex1
+        ey_source => field%ey1
+        ez_source => field%ez1
+    else
+        ex_target => field%ex3
+        ey_target => field%ey3
+        ez_target => field%ez3
+        
+        ex_source => field%ex2
+        ey_source => field%ey2
+        ez_source => field%ez2
+    end if
+    
+    !Update Ex
+    iy=1
+    do iz=2, state%nz-1
+        do ix=1, state%nx-1
+            ex_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *  &
+                                    (                                                                                      &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     ex_target(ix, iy+1, iz) +                                                             &
+                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     ex_source(ix, iy+1, iz) -                                                             &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy,iz))) *    &
+                                     ex_source(ix, iy, iz)                                                                 &
+                                    )
+        end do
+    end do
+    
+    iy=state%ny
+    do iz=2, state%nz-1
+        do ix=1, nx-1
+            ex_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
+                                    (                                                                                        &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     ex_target(ix, iy-1, iz) +                                                               &
+                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     ex_source(ix, iy-1, iz) -                                                               &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
+                                     ex_source(ix, iy, iz)
+                                    )
+        end do
+    end do
+    
+    iz=1
+    do iy=2, state%ny-1
+        do ix=1, state%nx-1
+            ex_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
+                                    ( &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     ex_target(ix, iy, iz+1) + &
+                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     ex_source(ix, iy, iz+1) - &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
+                                     ex_source(ix, iy, iz)
+                                    )
+        end do
+    end do
+    
+    iz=state%nz
+    do iy=2, state%ny-1
+        do ix=1, state%nx-1
+            ex_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
+                                    (                                                                                        &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     ex_target(ix, iy, iz-1) +                                                               &
+                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     ex_source(i,j,k-1) -                                                                    &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *   & 
+                                     ex_source(ix, iy, iz)
+                                    )
+        end do
+    end do
+    
+    !Update Ey
+    ix=1
+    do iz=2, state%nz-1
+        do iy=1, state%ny-1
+            ey_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
+                                    (                                                                                      &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
+                                     ey_target(ix+1, iy, iz) +                                                             &
+                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
+                                     ey_source(i+1,j,k) -                                                                  &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *   &
+                                     ey_source(ix, iy, iz)
+                                    )
+        end do
+    end do
+      
+    ix=state%nx
+    do iz=2, state%nz-1
+        do iy=1, state%ny-1
+            ey_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz)))  * &
+                                    (                                                                                        &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     ey_source(ix-1, iy, iz) +                                                               &
+                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     ey_source(ix-1, iy, iz) -                                                               &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
+                                     ey_source(ix, iy, iz)                                                                   &
+                                    )                                                                                        &
+        end do
+    end do
+      
+    iz=1
+    do iy=1, state%ny-1
+        do ix=2, state%nx-1
+            ey_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
+                                    (                                                                                      &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * feidl%rp_z_1(ix, iy, iz+1))) * &
+                                     ey_target(ix, iy,iz+1) +                                                              &
+                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     ey_source(ix, iy, iz+1) -                                                             &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
+                                     ey_source(ix, iy, iz)                                                                 &
+                                    )                                                                                      &
+        end do
+    end do
+      
+    iz=nz
+    do iy=1, state%ny-1
+        do ix=2, state%nx-1
+            ey_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
+                                    (                                                                                        &
+                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     ey_target(ix, iy, iz-1) +                                                               &
+                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     ey_source(ix, iy, iz-1) -                                                               &
+                                     (state%dt - state%dz *sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *    &     
+                                     ey_source(ix, iy, iz)                                                                   &
+                                    )                                                                                        &
+        end do
+    end do
+    
+    !Update Ez
+    ix=1
+    do iz=1, state%nz-1
+        do iy=2, state%ny-1
+            ez_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
+                                    (                                                                                      &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(xi+1, iy, iz))) * & 
+                                     ez_target(ix+1, iy, iz) +                                                             &
+                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
+                                     ez_source(ix+1, iy, iz) -                                                             & 
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz)))  *  &
+                                     ez_source(ix, iy, iz)                                                                 &
+                                    )                                                                                      &
+
+        end do
+    end do
+      
+    ix=state%nx
+    do iz=1, state%nz-1
+        do iy=2, state%ny-1
+            ez_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *  &
+                                    (                                                                                        &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     ez_target(ix-1, iy, iz) +                                                               &
+                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     ez_source(ix-1, iy, iz) -                                                               &
+                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
+                                     ez_source(ix, iy, iz)                                                                   &
+                                    )                                                                                        &
+         end do
+      end do
+      
+    iy=1
+    do iz=1, state%nz-1
+        do ix=2, state%nx-1
+            ez_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *  &
+                                    (                                                                                      &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     ez_target(ix, iy+1, iz) +                                                             & 
+                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     ez_source(ix, iy+1, iz) -                                                             &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *   &
+                                     ez_source(ix, iy, iz)
+                                    )
+        end do
+    end do
+      
+    iy=ny
+    do iz=1, state%nz-1
+        do ix=2, state%nx-1
+            ez_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
+                                    (                                                                                        &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     ez_target(ix, iy-1, iz) +                                                               &
+                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     ez_source(ix, iy-1, iz) -                                                               &
+                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
+                                     ez_source(ix, iy, iz)                                                                   &
+                                    )                                                                                        &
+        end do
+    end do
+end
+
 end
