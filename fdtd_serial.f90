@@ -10,7 +10,7 @@ use fdtd_calculations_module
 implicit none
     !local vars
     integer :: i
-    integer :: runs_count
+    integer :: total_runs_count
 
     !calculations data
     type(fdtd_state), pointer :: state
@@ -20,29 +20,36 @@ implicit none
     call init_fdtd_state(state, "data/input_params")
     call init_fdtd_field(field, state)
     call load_materials(state, field, "data/mat_specs_riken", "data/pgmdata/")
+    call setup_source(state, field)
     
     !main loop
-    !runs_count = int(real(state%t_max+2)/3.0)
-    !do i=1, runs_count
+    total_runs_count = real(state%t_max+2)
+    do i=1, total_runs_count, 3
         !first run
-    !    call update_h_field(state, field, 0)
-    !    call update_d_field(state, field, 0)
-    !    call update_source(state, field, 0)
-    !    call update_e_field(state, field, 0)
-    !    call update_mur_boundary(state, field, 0)
+        call update_h_field(state, field, 1)
+        call update_d_field(state, field, 1)
+        call update_source(state, field, 1, (i-1)/3 + 1)
+        call update_e_field(state, field, 1)
+        call update_mur_boundary(state, field, 1)
+        
+        call write_result(state, field, 1, i, "output/")
         
         !second run
-    !    call update_h_field(state, field, 1)
-    !    call update_d_field(state, field, 1)
-    !    call update_source(state, field, 1)
-    !    call update_e_field(state, field, 1)
-    !    call update_mur_boundary(state, field, 1)
+        call update_h_field(state, field, 2)
+        call update_d_field(state, field, 2)
+        call update_source(state, field, 2, (i-1)/3 + 1)
+        call update_e_field(state, field, 2)
+        call update_mur_boundary(state, field, 2)
+        
+        call write_result(state, field, 2, i+1, "output/")
         
         !third run
-    !    call update_h_field(state, field, 2)
-    !    call update_d_field(state, field, 2)
-    !    call update_source(state, field, 2)
-    !    call update_e_field(state, field, 2)
-    !    call update_mur_boundary(state, field, 2)
-    !end do
+        call update_h_field(state, field, 3)
+        call update_d_field(state, field, 3)
+        call update_source(state, field, 3, (i-1)/3 + 1)
+        call update_e_field(state, field, 3)
+        call update_mur_boundary(state, field, 3)
+        
+        call write_result(state, field, 3, i+2, "output/")
+    end do
 end program

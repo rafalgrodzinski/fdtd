@@ -4,6 +4,7 @@ implicit none
 contains
 
 subroutine check_error(error_code, message)
+    !inut
     integer, intent(in)          :: error_code
     character(len=*), intent(in) :: message
 

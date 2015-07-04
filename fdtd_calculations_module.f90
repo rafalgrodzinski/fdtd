@@ -13,23 +13,23 @@ subroutine update_h_field(state, field, run_num)
     integer, intent(in)                   :: run_num
     !local vars
     integer :: ix, iy, iz
-    real, dimension(:,:,:), pointer :: ex_field
-    real, dimension(:,:,:), pointer :: ey_field
-    real, dimension(:,:,:), pointer :: ez_field
+    real, dimension(:,:,:), pointer :: ex_source
+    real, dimension(:,:,:), pointer :: ey_source
+    real, dimension(:,:,:), pointer :: ez_source
     
-    !setup based on run_num 0..2
-    if(run_num .eq. 0) then
-        ex_field => field%ex3
-        ey_field => field%ey3
-        ez_field => field%ez3
-    else if(run_num .eq. 1) then
-        ex_field => field%ex1
-        ey_field => field%ey1
-        ez_field => field%ez1
+    !setup based on run_num 1..3
+    if(run_num .eq. 1) then
+        ex_source => field%ex3
+        ey_source => field%ey3
+        ez_source => field%ez3
+    else if(run_num .eq. 2) then
+        ex_source => field%ex1
+        ey_source => field%ey1
+        ez_source => field%ez1
     else
-        ex_field => field%ex2
-        ey_field => field%ey2
-        ez_field => field%ez2
+        ex_source => field%ex2
+        ey_source => field%ey2
+        ez_source => field%ez2
     end if
     
     !Update Hx
@@ -38,41 +38,41 @@ subroutine update_h_field(state, field, run_num)
 	        do ix=2, state%nx-1
                 field%hx(ix, iy, iz) = field%hx(ix, iy, iz) -             &
                                        state%dt/(state%mu_0 * state%dy) * &
-                                       (ez_field(ix, iy+1, iz) -          &
-                                       ez_field(ix, iy, iz)) +            &
+                                       (ez_source(ix, iy+1, iz) -          &
+                                       ez_source(ix, iy, iz)) +            &
                                        state%dt/(state%mu_0 * state%dz) * &
-                                       (ey_field(ix, iy, iz+1) -          &
-                                       ey_field(iz, iy, iz))
+                                       (ey_source(ix, iy, iz+1) -          &
+                                       ey_source(ix, iy, iz))
             end do
 	    end do
     end do
-    
+
     !Update Hy
     do iz=1, state%nz-1
         do iy=2, state%ny-1
 	        do ix=1, state%nx-1
                 field%hy(ix, iy, iz) = field%hy(ix, iy, iz) -             &
                                        state%dt/(state%mu_0 * state%dz) * &
-                                       (ex_field(ix, iy, iz+1) -          &
-                                       ex_field(ix, iy, iz)) +            &
+                                       (ex_source(ix, iy, iz+1) -          &
+                                       ex_source(ix, iy, iz)) +            &
                                        state%dt/(state%mu_0 * state%dx) * &
-                                       (ez_field(ix+1, iy, iz) -          &
-                                       ez_field(ix, iy, iz))
+                                       (ez_source(ix+1, iy, iz) -          &
+                                       ez_source(ix, iy, iz))
             end do
 	    end do
     end do
-    
+
     !Update Hz
     do iz=2, state%nz-1
         do iy=1, state%ny-1
 	        do ix=1, state%nx-1
                 field%hz(ix, iy, iz) = field%hz(ix, iy, iz) -             &
                                        state%dt/(state%mu_0 * state%dx) * &
-                                       (ey_field(ix+1, iy, iz) -          &
-                                       ey_field(ix, iy, iz)) +            &
+                                       (ey_source(ix+1, iy, iz) -          &
+                                       ey_source(ix, iy, iz)) +            &
                                        state%dt/(state%mu_0 * state%dy) * &
-                                       (ex_field(ix, iy+1, iz) -          &
-                                       ex_field(ix, iy, iz))
+                                       (ex_source(ix, iy+1, iz) -          &
+                                       ex_source(ix, iy, iz))
             end do
 	    end do
     end do
@@ -93,47 +93,45 @@ subroutine update_d_field(state, field, run_num)
     real, dimension(:,:,:), pointer :: dx_source
     real, dimension(:,:,:), pointer :: dy_source
     real, dimension(:,:,:), pointer :: dz_source
-    
-    !setup based on run_num 0..2
-    if(run_num .eq. 0) then
+
+    !setup based on run_num 1..3
+    if(run_num .eq. 1) then
         dx_target => field%dx1
-        dy_target => field%dx1
-        dz_target => field%dx1
+        dy_target => field%dy1
+        dz_target => field%dz1
         
         dx_source => field%dx3
-        dy_source => field%dx3
-        dz_source => field%dx3
-    else if(run_num .eq. 1) then
+        dy_source => field%dy3
+        dz_source => field%dz3
+    else if(run_num .eq. 2) then
         dx_target => field%dx2
-        dy_target => field%dx2
-        dz_target => field%dx2
+        dy_target => field%dy2
+        dz_target => field%dz2
         
         dx_source => field%dx1
-        dy_source => field%dx1        
-        dz_source => field%dx1
+        dy_source => field%dy1        
+        dz_source => field%dz1
     else
         dx_target => field%dx3
-        dy_target => field%dx3
-        dz_target => field%dx3
+        dy_target => field%dy3
+        dz_target => field%dz3
 
         dx_source => field%dx2        
-        dy_source => field%dx2        
-        dz_source => field%dx2
+        dy_source => field%dy2        
+        dz_source => field%dz2
     end if
-    
+
     !Update Dx
     do iz=2, state%nz-1
         do iy=2, state%ny-1
 	        do ix=1, state%nx-1
-                dx_target(ix, iy, iz) = dx_source(ix, iy, iz) +                     &
-                                        state%dt/state%dy * (field%hz(ix, iy, iz) - &
-                                        field%hz(ix, iy-1, iz)) -                   &
-                                        state%dt/state%dz * (field%hy(ix, iy, iz) - &
-                                        field%hy(ix, iy, iz-1))
+                dx_target(ix, iy, iz) = dx_source(ix, iy, iz) + &
+                                        state%dt/state%dy * (field%hz(ix, iy, iz) - field%hz(ix, iy-1, iz)) - &
+                                        state%dt/state%dz * (field%hy(ix, iy, iz) - field%hy(ix, iy, iz-1))
             end do
 	    end do
     end do
-    
+
     !Update Dy
     do iz=2, state%nz-1
         do iy=1, state%ny-1
@@ -146,7 +144,7 @@ subroutine update_d_field(state, field, run_num)
             end do
 	    end do
     end do
-    
+
     !Update Dz
     do iz=1, state%nz-1
         do iy=2, state%ny-1
@@ -155,7 +153,7 @@ subroutine update_d_field(state, field, run_num)
                                         state%dt/state%dx * (field%hy(ix, iy, iz) - &
                                         field%hy(ix-1, iy, iz)) -                   &
                                         state%dt/state%dy * (field%hx(ix, iy, iz) - &
-                                        field%hx(ix, iy-1, iz))
+                                        field%hx(ix, iy-1, iz))                                
             end do
         end do
     end do
@@ -190,9 +188,9 @@ subroutine update_e_field(state, field, run_num)
     real, dimension(:,:,:), pointer :: dz_source_1
     real, dimension(:,:,:), pointer :: dz_source_2
     real, dimension(:,:,:), pointer :: dz_source_3
-    
-    !setup based on run_num 0..2
-    if(run_num .eq. 0) then
+
+    !setup based on run_num 1..3
+    if(run_num .eq. 1) then
         ex_target => field%ex1
         ey_target => field%ey1
         ez_target => field%ez1
@@ -214,7 +212,7 @@ subroutine update_e_field(state, field, run_num)
         dz_source_1 => field%dz1
         dz_source_2 => field%dz3
         dz_source_3 => field%dz2
-    else if(run_num .eq. 1) then
+    else if(run_num .eq. 2) then
         ex_target => field%ex2
         ey_target => field%ey2
         ez_target => field%ez2
@@ -258,8 +256,9 @@ subroutine update_e_field(state, field, run_num)
         dz_source_1 => field%dz3
         dz_source_2 => field%dz2
         dz_source_3 => field%dz1
-    end if
     
+    end if
+
     !Update Ex
     do iz=2, state%nz-1
         do iy=2, state%ny-1
@@ -293,7 +292,7 @@ subroutine update_e_field(state, field, run_num)
             end do
 	    end do
     end do
-    
+
     !Update Ey
     do iz=2, state%nz-1
         do iy=1, state%ny-1
@@ -327,7 +326,7 @@ subroutine update_e_field(state, field, run_num)
             end do
 	    end do
     end do
-    
+
     !Update Ez
     do iz=2, state%nz-1
         do iy=1, state%ny-1
@@ -374,28 +373,30 @@ subroutine update_source(state, field, run_num, runs_count)
     integer :: i
     real, dimension(:,:,:), pointer :: dz_target
     real, dimension(:,:,:), pointer :: dz_source
-    
-    !setup based on run_num 0..2
-    if(run_num .eq. 0) then
-        dz_target = field%dz1
-        dz_source = field%dz3
-    else if(run_num .eq. 1) then
-        dz_target = field%dz2
-        dz_source = field%dz1
+    integer :: x, y, z
+
+    !setup based on run_num 1..3
+    if(run_num .eq. 1) then
+        dz_target => field%dz1
+        dz_source => field%dz3
+    else if(run_num .eq. 2) then
+        dz_target => field%dz2
+        dz_source => field%dz1
     else
-        dz_target = field%dz3
-        dz_source = field%dz2
+        dz_target => field%dz3
+        dz_source => field%dz2
     end if
-    
+
     !Update source
-    do i=0, state%nsrc-1
-        dz_target(state%src(i, 0), state%src(i,1), state%src(i,2)) =                           &
-            dz_source(state%src(i, 0), state%src(i, 1), state%src(i, 2)) +                     &
-            state%dt/state%dx * (field%hy(state%src(i, 0), state%src(i, 1), state%src(i, 2)) - &
-            field%hy(state%src(i, 0)-1, state%src(i, 1), state%src(i, 2))) -                   &
-            state%dt/state%dy * (field%hx(state%src(i, 0), state%src(i, 1), state%src(i, 2)) - &
-            field%hx(state%src(i, 0), state%src(i, 1)-1, state%src(i, 2))) -                   &
-            state%jz(int(((runs_count-1)*3)+1))
+    do i=1, state%nsrc
+        x = state%src(i, 1)
+        y = state%src(i, 2)
+        z = state%src(i, 3)
+    
+        dz_target(x, y, z) = dz_source(x, y, z) +                     &
+            state%dt/state%dx * (field%hy(x, y, z) - field%hy(x-1, y, z)) - &
+            state%dt/state%dy * (field%hx(x, y, z) - field%hx(x, y-1, z)) - &
+            state%jz(((runs_count-1)*3)+1)
     enddo
 end
 
@@ -414,8 +415,8 @@ subroutine update_mur_boundary(state, field, run_num)
     real, dimension(:,:,:), pointer :: ez_source
     integer :: ix, iy, iz
     
-    !Setup based on run_num 0..2
-    if(run_num .eq. 0) then
+    !Setup based on run_num 1..3
+    if(run_num .eq. 1) then
         ex_target => field%ex1
         ey_target => field%ey1
         ez_target => field%ez1
@@ -423,7 +424,7 @@ subroutine update_mur_boundary(state, field, run_num)
         ex_source => field%ex3
         ey_source => field%ey3
         ez_source => field%ez3
-    else if(run_num .eq. 1) then
+    else if(run_num .eq. 2) then
         ex_target => field%ex2
         ey_target => field%ey2
         ez_target => field%ez2

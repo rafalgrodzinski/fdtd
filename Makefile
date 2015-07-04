@@ -1,10 +1,10 @@
 CC=gfortran-mp-4.9
-CFLAGS=
+CFLAGS=-g -save-temps=obj
 OUTPUT=fdtd_serial
 SOURCES=fdtd_serial.f90
 
 all:
-	${CC} ${CFLAGS} -o ${OUTPUT} ${SOURCES}
+	${CC} -o ${OUTPUT} ${CFLAGS} ${SOURCES}
     
 clean:
-	rm ${OUTPUT} *.mod *.o
+	rm ${OUTPUT} *.mod *.o *.s
