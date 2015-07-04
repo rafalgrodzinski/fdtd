@@ -5,30 +5,24 @@ implicit none
 
 type fdtd_state
     !read from file
-    integer :: nx, ny, nz
-    integer :: t_max
-    integer :: nf
-    character(len=128) :: rdirname
-    character(len=32) :: rprefix
-    character(len=128) :: dirname
-    character :: outformat*3, chr
-    integer :: impulse_resp_flag, pec_flag, read_env_flag
-    integer :: output_flag, bzip2_flag
-    integer, dimension(0:2) :: output_start, output_finish
-    character :: stype*4
-    integer :: elem_lambda
-    real :: w_freq
-    real :: pwidth, pmodufreq
-    integer :: nsrc
+    integer              :: nx, ny, nz
+    integer              :: runs_count
+    character(len=128)   :: input_path
+    character(len=128)   :: output_path
+    integer              :: elements_per_wave
+    real                 :: wave_freq
+    real                 :: pulse_width
+    real                 :: pulse_modulation_freq
+    integer              :: nsrc
     integer, allocatable :: src(:,:)
-    integer :: ptype
-    real :: fsigma, feps_s, feps_i, ftau_d
-    real :: feps_m, ftau_2
-    real :: a
+    real                 :: sigma
+    real                 :: eps_s
+    real                 :: eps_i
+    real                 :: tau_d
     
     !generated
     real :: pi = acos(-1.0) !Delicious pie
-    real :: c = 3.0*10.0**8 !Light speed (v in m/s)
+    real :: c = 3.0 * 10.0**8 !Light speed (v in m/s)
     real :: timeskip !Time step skip
     real :: lambda !Wave length (meters)
     real :: dt !Length of the time step
@@ -41,6 +35,7 @@ end type
 
 
 type fdtd_field
+    !fdtd field
     real, dimension(:,:,:), pointer :: ex1,ex2,ex3
     real, dimension(:,:,:), pointer :: ey1,ey2,ey3 
     real, dimension(:,:,:), pointer :: ez1,ez2,ez3 
@@ -72,7 +67,8 @@ subroutine init_fdtd_state(state, file_name)
     !local vars
     integer, parameter :: file_unit = 51
     integer            :: error_code
-    character          :: dummy_char
+    character          :: temp_c
+    integer            :: temp_i
     integer            :: i
     
     allocate(state)
@@ -80,54 +76,73 @@ subroutine init_fdtd_state(state, file_name)
     open(unit=file_unit, file=file_name, status="old", iostat=error_code)
     call check_error(error_code, "Couldn't open file "//file_name)
 
-    read(51, *, iostat=error_code) dummy_char, state%nx, state%ny, state%nz
-    read(51, *, iostat=error_code) dummy_char, state%t_max
-    read(51, *, iostat=error_code) dummy_char, state%nf
-    read(51, *, iostat=error_code) dummy_char, state%rdirname
-    read(51, *, iostat=error_code) dummy_char, state%rprefix
-    read(51, *, iostat=error_code) dummy_char, state%dirname
-    read(51, *, iostat=error_code) dummy_char, state%outformat
-    read(51, *, iostat=error_code) dummy_char, state%impulse_resp_flag
-    read(51, *, iostat=error_code) dummy_char, state%pec_flag
-    read(51, *, iostat=error_code) dummy_char, state%read_env_flag
-    read(51, *, iostat=error_code) dummy_char, state%output_flag
-    read(51, *, iostat=error_code) dummy_char, state%bzip2_flag
-    read(51, *, iostat=error_code) dummy_char, state%output_start(0:2)
-    read(51, *, iostat=error_code) dummy_char, state%output_finish(0:2)
-    read(51, *, iostat=error_code) dummy_char, state%stype
-    read(51, *, iostat=error_code) dummy_char, state%elem_lambda
-    read(51, *, iostat=error_code) dummy_char, state%w_freq
-    read(51, *, iostat=error_code) dummy_char, state%pwidth
-    read(51, *, iostat=error_code) dummy_char, state%pmodufreq
-    read(51, *, iostat=error_code) dummy_char, state%nsrc
-
-    allocate (state%src(1:state%nsrc, 1:3))
-
+    !nx_ny_nz (field size)
+    read(file_unit, *) temp_c, state%nx, state%ny, state%nz
+    !t_max (simulation runs count)
+    read(file_unit, *) temp_c, temp_i
+    state%runs_count = ((temp_i-1)/3 + 1)*3 !runs count has to be divisible by 3
+    !unused (nf)
+    read(file_unit, *) temp_c, temp_i
+    !env_set_dir (input path)
+    read(file_unit, *) temp_c, state%input_path
+    !unused (env_file_prefix)
+    read(file_unit, *) temp_c, temp_c
+    !output_dir (output path)
+    read(file_unit, *) temp_c, state%output_path
+    !unused (output_format)
+    read(file_unit, *) temp_c, temp_c
+    !unused (impulse_resp_flag)
+    read(file_unit, *) temp_c, temp_i
+    !unused (pec_flag)
+    read(file_unit, *) temp_c, temp_i
+    !unused (read_env_flag)
+    read(file_unit, *) temp_c, temp_i
+    !unused (output_flag)
+    read(file_unit, *) temp_c, temp_i
+    !unused (bzip2_flag)
+    read(file_unit, *) temp_c, temp_i
+    !unused (output_start)
+    read(file_unit, *) temp_c, temp_i, temp_i, temp_i
+    !unused (output_finish)
+    read(file_unit, *) temp_c, temp_i, temp_i, temp_i
+    !unused (source_type)
+    read(file_unit, *) temp_c, temp_c
+    !elements_per_wavelength
+    read(file_unit, *) temp_c, state%elements_per_wave
+    !wave_freq
+    read(file_unit, *) temp_c, state%wave_freq
+    !pulse_width
+    read(file_unit, *) temp_c, state%pulse_width
+    !pulse_modulation_frequency
+    read(file_unit, *) temp_c, state%pulse_modulation_freq
+    !number_of_excitation_sources
+    read(file_unit, *) temp_c, state%nsrc
+    allocate (state%src(state%nsrc, 1:3))
+    !source_location
     do i = 1, state%nsrc
-      read(51, *, iostat=error_code) dummy_char, state%src(i,1:3)
+      read(file_unit, *) temp_c, state%src(i, 1:3)
     enddo
-
-    read(51, *, iostat=error_code) dummy_char, state%ptype
-
-    read(51, *, iostat=error_code) dummy_char, state%fsigma
-    read(51, *, iostat=error_code) dummy_char, state%feps_s
-    read(51, *, iostat=error_code) dummy_char, state%feps_i
-    read(51, *, iostat=error_code) dummy_char, state%ftau_d
-    read(51, *, iostat=error_code) dummy_char, state%feps_m
-    read(51, *, iostat=error_code) dummy_char, state%ftau_2
-
-    read(51, *, iostat=error_code) dummy_char, state%A
+    !unused (pulse_type)
+    read(file_unit, *) temp_c, temp_i
+    !fsigma (sigma)
+    read(file_unit, *) temp_c, state%sigma
+    !feps_s (eps_s)
+    read(file_unit, *) temp_c, state%eps_s
+    !feps_inf (eps_i)
+    read(file_unit, *) temp_c, state%eps_i
+    !ftau_d (tau_d)
+    read(file_unit, *) temp_c, state%tau_d
     
     close(file_unit)
     
     !generate rest of the values
     state%timeskip = 1.0
-    state%lambda = state%c / state%w_freq
-    state%dx = state%lambda/state%elem_lambda
+    state%lambda = state%c / state%wave_freq
+    state%dx = state%lambda/state%elements_per_wave
     state%dy = state%dx
     state%dz = state%dx
     state%dt = 1.0d0 * state%timeskip / (state%c * sqrt(1.0d0/(state%dx**2) + 1.0d0/(state%dy**2) + 1.0d0/(state%dz**2)))
-    state%mu_0 = 4*state%pi*10**(-7.0)
+    state%mu_0 = 4 * state%pi*10**(-7.0)
     state%eps_0 = 1.0/(state%mu_0 * state%c * state%c)
 end
 
@@ -150,163 +165,159 @@ subroutine init_fdtd_field(field, state)
     
     allocate(field)
     
-    allocate(field%ex1(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%ex2(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%ex3(1:state%nx, 1:state%ny, 1:state%nz))
+    !Initialise H field
+    allocate(field%hx(state%nx, state%ny, state%nz))
+    allocate(field%hy(state%nx, state%ny, state%nz))
+    allocate(field%hz(state%nx, state%ny, state%nz))
 
-    allocate(field%ey1(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%ey2(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%ey3(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%ez1(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%ez2(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%ez3(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%hx(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%hy(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%hz(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%dx1(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%dx2(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%dx3(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%dy1(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%dy2(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%dy3(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%dz1(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%dz2(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%dz3(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%eps_i(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%eps_s(1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%tau_d(1:state%nx, 1:state%ny, 1:state%nz))
-    allocate(field%sigma(1:state%nx, 1:state%ny, 1:state%nz))
+    field%hx = 0.0
+    field%hy = 0.0
+    field%hz = 0.0
     
-    field%ex1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%ex2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%ex3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%ey1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%ey2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%ey3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%ez1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%ez2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%ez3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%hx(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%hy(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%hz(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%dx1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%dx2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%dx3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%dy1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%dy2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%dy3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%dz1(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%dz2(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%dz3(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    field%eps_i(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%eps_s(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%tau_d(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-    field%sigma(1:state%nx, 1:state%ny, 1:state%nz) = 0.0
+    !Initialise D field
+    allocate(field%dx1(state%nx, state%ny, state%nz))
+    allocate(field%dx2(state%nx, state%ny, state%nz))
+    allocate(field%dx3(state%nx, state%ny, state%nz))
     
-    field%sigma(1:state%nx, 1:state%ny, 1:state%nz) = state%fsigma
-    field%eps_s(1:state%nx, 1:state%ny, 1:state%nz) = state%feps_s
-    field%eps_i(1:state%nx, 1:state%ny, 1:state%nz) = state%feps_i
-    field%tau_d(1:state%nx, 1:state%ny, 1:state%nz) = state%ftau_d
+    field%dx1 = 0.0
+    field%dx2 = 0.0
+    field%dx3 = 0.0
+
+    allocate(field%dy1(state%nx, state%ny, state%nz))
+    allocate(field%dy2(state%nx, state%ny, state%nz))
+    allocate(field%dy3(state%nx, state%ny, state%nz))
+    
+    field%dy1 = 0.0
+    field%dy2 = 0.0
+    field%dy3 = 0.0
+
+    allocate(field%dz1(state%nx, state%ny, state%nz))
+    allocate(field%dz2(state%nx, state%ny, state%nz))
+    allocate(field%dz3(state%nx, state%ny, state%nz))
+    
+    field%dz1 = 0.0
+    field%dz2 = 0.0
+    field%dz3 = 0.0
+
+    !Initialise E field
+    allocate(field%ex1(state%nx, state%ny, state%nz))
+    allocate(field%ex2(state%nx, state%ny, state%nz))
+    allocate(field%ex3(state%nx, state%ny, state%nz))
+    
+    field%ex1 = 0.0
+    field%ex2 = 0.0
+    field%ex3 = 0.0
+
+    allocate(field%ey1(state%nx, state%ny, state%nz))
+    allocate(field%ey2(state%nx, state%ny, state%nz))
+    allocate(field%ey3(state%nx, state%ny, state%nz))
+    
+    field%ey1 = 0.0
+    field%ey2 = 0.0
+    field%ey3 = 0.0
+
+    allocate(field%ez1(state%nx, state%ny, state%nz))
+    allocate(field%ez2(state%nx, state%ny, state%nz))
+    allocate(field%ez3(state%nx, state%ny, state%nz))
+    
+    field%ez1 = 0.0
+    field%ez2 = 0.0
+    field%ez3 = 0.0
+
+    allocate(field%eps_i(state%nx, state%ny, state%nz))
+    allocate(field%eps_s(state%nx, state%ny, state%nz))
+
+    allocate(field%tau_d(state%nx, state%ny, state%nz))
+    allocate(field%sigma(state%nx, state%ny, state%nz))
+
+    field%eps_i = 0.0
+    field%eps_s = 0.0
+    field%tau_d = 0.0
+    field%sigma = 0.0
+    
+    field%sigma = state%sigma
+    field%eps_s = state%eps_s
+    field%eps_i = state%eps_i
+    field%tau_d = state%tau_d
     
     !Initialise mur boundary
-    allocate(field%rp_x_1(1:2, 1:state%ny, 1:state%nz))
-    allocate(field%rp_x_end(state%nx-1:state%nx, 1:state%ny, 1:state%nz))
-
-    allocate(field%rp_y_1(1:state%nx, 1:2, 1:state%nz))
-    allocate(field%rp_y_end(1:state%nx, state%ny-1:state%ny, 1:state%nz))
-
-    allocate(field%rp_z_1(1:state%nx, 1:state%ny, 1:2))
-    allocate(field%rp_z_end(1:state%nx, 1:state%ny, state%nz-1:state%nz))
-    
     !Setup rp_x
-    field%rp_x_1(1:2, 1:state%ny, 1:state%nz) = 0.0
-    field%rp_x_end(state%nx-1:state%nx, 1:state%ny, 1:state%nz) = 0.0
-
-    do iz=1, state%nz
-        do iy=1, state%ny
-            do ix=1, 2
-                field%rp_x_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                    &
-                                            (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                            &
-                                            (1 + cmplx(0.0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy,iz))) -         &
-                                            cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
-            end do
-	    end do
-    end do
+    allocate(field%rp_x_1(2, state%ny, state%nz))
+    allocate(field%rp_x_end(state%nx-1:state%nx, state%ny, state%nz))
+    
+    field%rp_x_1 = 0.0
+    field%rp_x_end = 0.0
 
     do iz=1, state%nz
 	    do iy=1, state%ny
+            do ix=1, 2
+                field%rp_x_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
+                                            (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                       &
+                                            (1 + cmplx(0.0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy,iz))) - &
+                                            cmplx(0, field%sigma(ix, iy, iz) /                                          &
+                                             (2 * state%pi * state%wave_freq * state%eps_0)))
+            end do
+            
             do ix=state%nx-1, state%nx 
-                field%rp_x_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
-                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
-                                                  (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
-                                                  cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+                field%rp_x_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
+                                                  (1 + cmplx(0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) /                                         &
+                                                   (2 * state%pi * state%wave_freq * state%eps_0)))
             end do
 	    end do
     end do
     
     !Setup rp_y
-    field%rp_y_1(1:state%nx, 1:2, 1:state%nz) = 0.0
-    field%rp_y_end(1:state%nx, state%ny-1:state%ny, 1:state%nz) = 0.0
+    allocate(field%rp_y_1(state%nx, 2, state%nz))
+    allocate(field%rp_y_end(state%nx, state%ny-1:state%ny, state%nz))
+    
+    field%rp_y_1 = 0.0
+    field%rp_y_end = 0.0
 
     do iz=1, state%nz
-	    do iy=1, 2 
-            do ix=1, state%nx 
-                field%rp_y_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                &
-                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                    &
-                                                (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) -  &
-                                                cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+        do ix=1, state%nx 
+            do iy=1, 2 
+                field%rp_y_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
+                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
+                                                (1.0 + cmplx(0, 2.0 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                cmplx(0, field%sigma(ix, iy, iz) /                                             &
+                                                (2.0 * state%pi * state%wave_freq * state%eps_0)))
             end do
-	    end do
-    end do
-
-
-    do iz=1, state%nz
-	    do iy=state%ny-1, state%ny
-            do ix=1, state%nx 
-                field%rp_y_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
-                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
-                                                  (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
-                                                  cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+	    
+            do iy=state%ny-1, state%ny
+                field%rp_y_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
+                                                  (1.0 + cmplx(0, 2.0 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) /                                             &
+                                                  (2 * state%pi * state%wave_freq * state%eps_0)))
             end do
 	    end do
     end do
     
     !Setup rp_z
-    field%rp_z_1(1:state%nx, 1:state%ny, 1:2) = 0.0
-    field%rp_z_end(1:state%nx, 1:state%ny, state%nz-1:state%nz) = 0.0
+    allocate(field%rp_z_1(state%nx, state%ny, 2))
+    allocate(field%rp_z_end(state%nx, state%ny, state%nz-1:state%nz))
+    
+    field%rp_z_1 = 0.0
+    field%rp_z_end = 0.0
 
-    do iz=1, 2 
-	    do iy=1, state%ny
-            do ix=1, state%nx
-                field%rp_z_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
-                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
-                                                (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
-                                                cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+    do iy=1, state%ny
+        do ix=1, state%nx
+            do iz=1, 2 
+                field%rp_z_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
+                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
+                                                (1 + cmplx(0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                cmplx(0, field%sigma(ix, iy, iz) /                                         &
+                                                (2 * state%pi * state%wave_freq * state%eps_0)))
             end do
-	    end do
-    end do
-
-    do iz=state%nz-1, state%nz 
-    	do iy=1, state%ny
-            do ix=1, state%nx
-                field%rp_z_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
-                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                   &
-                                                  (1 + cmplx(0, 2 * state%pi * state%w_freq * field%tau_d(ix, iy, iz))) - &
-                                                  cmplx(0, field%sigma(ix, iy, iz) / (2 * state%pi * state%w_freq * state%eps_0)))
+            
+            do iz=state%nz-1, state%nz 
+                field%rp_z_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
+                                                  (1 + cmplx(0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) /                                         &
+                                                  (2 * state%pi * state%wave_freq * state%eps_0)))
             end do
 	    end do
     end do
@@ -442,9 +453,9 @@ subroutine setup_source(state, field)
     allocate(tmpdata2(-2**16:2**16))
     
     !fine & temp
-    fine = int(2**13 * state%pwidth * state%w_freq * state%dt)
+    fine = int(2**13 * state%pulse_width * state%wave_freq * state%dt)
 
-    temp = 1/(state%pwidth * state%w_freq)/(state%dt / fine)/2
+    temp = 1/(state%pulse_width * state%wave_freq)/(state%dt / fine)/2
     
     !tmpdata
     do i=-2**14, 2**14
@@ -456,7 +467,7 @@ subroutine setup_source(state, field)
     end do
       
     do i = -temp-1,temp+1
-      tmpdata(i) = tmpdata(i) *cos(2.0*acos(-1.0)* state%pmodufreq * state%w_freq*i*(state%dt/fine))     
+      tmpdata(i) = tmpdata(i) *cos(2.0*acos(-1.0)* state%pulse_modulation_freq * state%wave_freq*i*(state%dt/fine))     
     enddo
 
     !istart

@@ -10,7 +10,6 @@ use fdtd_calculations_module
 implicit none
     !local vars
     integer :: i
-    integer :: total_runs_count
 
     !calculations data
     type(fdtd_state), pointer :: state
@@ -23,8 +22,7 @@ implicit none
     call setup_source(state, field)
     
     !main loop
-    total_runs_count = real(state%t_max+2)
-    do i=1, total_runs_count, 3
+    do i=1, state%runs_count, 3
         !first run
         call update_h_field(state, field, 1)
         call update_d_field(state, field, 1)
