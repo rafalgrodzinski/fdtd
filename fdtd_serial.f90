@@ -18,7 +18,7 @@ implicit none
     !initialise data
     call init_fdtd_state(state, "data/input_params")
     call init_fdtd_field(field, state)
-    call load_materials(state, field, "data/mat_specs_riken", "data/pgmdata/")
+    call load_materials(state, field, "data/mat_specs_riken", trim(state%input_path))
     call setup_source(state, field)
     
     !main loop
@@ -30,7 +30,7 @@ implicit none
         call update_e_field(state, field, 1)
         call update_mur_boundary(state, field, 1)
         
-        call write_result(state, field, 1, i, "output/")
+        call write_result(state, field, 1, i, trim(state%output_path))
         
         !second run
         call update_h_field(state, field, 2)
@@ -39,7 +39,7 @@ implicit none
         call update_e_field(state, field, 2)
         call update_mur_boundary(state, field, 2)
         
-        call write_result(state, field, 2, i+1, "output/")
+        call write_result(state, field, 2, i+1, trim(state%output_path))
         
         !third run
         call update_h_field(state, field, 3)
@@ -48,6 +48,6 @@ implicit none
         call update_e_field(state, field, 3)
         call update_mur_boundary(state, field, 3)
         
-        call write_result(state, field, 3, i+2, "output/")
+        call write_result(state, field, 3, i+2, trim(state%output_path))
     end do
 end program
