@@ -3,7 +3,7 @@ use utils_module
 
 implicit none
 
-type fdtd_state
+type fdtd_params
     !read from file
     integer              :: nx, ny, nz
     integer              :: runs_count
@@ -60,10 +60,10 @@ end type
 
 contains
 
-subroutine init_fdtd_state(state, file_name)
+subroutine init_fdtd_parameters(params, file_name)
     !input
-    type(fdtd_state), pointer, intent(inout) :: state
-    character(len=*), intent(in)             :: file_name
+    type(fdtd_params), pointer, intent(inout) :: params
+    character(len=*), intent(in)              :: file_name
     !local vars
     integer, parameter :: file_unit = 51
     integer            :: error_code
@@ -71,24 +71,24 @@ subroutine init_fdtd_state(state, file_name)
     integer            :: temp_i
     integer            :: i
     
-    allocate(state)
+    allocate(params)
     
     open(unit=file_unit, file=file_name, status="old", iostat=error_code)
     call check_error(error_code, "Couldn't open file "//file_name)
 
     !nx_ny_nz (field size)
-    read(file_unit, *) temp_c, state%nx, state%ny, state%nz
+    read(file_unit, *) temp_c, params%nx, params%ny, params%nz
     !t_max (simulation runs count)
     read(file_unit, *) temp_c, temp_i
-    state%runs_count = ((temp_i-1)/3 + 1)*3 !runs count has to be divisible by 3
+    params%runs_count = ((temp_i-1)/3 + 1)*3 !runs count has to be divisible by 3
     !unused (nf)
     read(file_unit, *) temp_c, temp_i
     !env_set_dir (input path)
-    read(file_unit, *) temp_c, state%input_path
+    read(file_unit, *) temp_c, params%input_path
     !unused (env_file_prefix)
     read(file_unit, *) temp_c, temp_c
     !output_dir (output path)
-    read(file_unit, *) temp_c, state%output_path
+    read(file_unit, *) temp_c, params%output_path
     !unused (output_format)
     read(file_unit, *) temp_c, temp_c
     !unused (impulse_resp_flag)
@@ -108,216 +108,217 @@ subroutine init_fdtd_state(state, file_name)
     !unused (source_type)
     read(file_unit, *) temp_c, temp_c
     !elements_per_wavelength
-    read(file_unit, *) temp_c, state%elements_per_wave
+    read(file_unit, *) temp_c, params%elements_per_wave
     !wave_freq
-    read(file_unit, *) temp_c, state%wave_freq
+    read(file_unit, *) temp_c, params%wave_freq
     !pulse_width
-    read(file_unit, *) temp_c, state%pulse_width
+    read(file_unit, *) temp_c, params%pulse_width
     !pulse_modulation_frequency
-    read(file_unit, *) temp_c, state%pulse_modulation_freq
+    read(file_unit, *) temp_c, params%pulse_modulation_freq
     !number_of_excitation_sources
-    read(file_unit, *) temp_c, state%nsrc
-    allocate (state%src(state%nsrc, 1:3))
+    read(file_unit, *) temp_c, params%nsrc
+    allocate (params%src(params%nsrc, 1:3))
     !source_location
-    do i = 1, state%nsrc
-      read(file_unit, *) temp_c, state%src(i, 1:3)
+    do i = 1, params%nsrc
+      read(file_unit, *) temp_c, params%src(i, 1:3)
     enddo
     !unused (pulse_type)
     read(file_unit, *) temp_c, temp_i
     !fsigma (sigma)
-    read(file_unit, *) temp_c, state%sigma
+    read(file_unit, *) temp_c, params%sigma
     !feps_s (eps_s)
-    read(file_unit, *) temp_c, state%eps_s
+    read(file_unit, *) temp_c, params%eps_s
     !feps_inf (eps_i)
-    read(file_unit, *) temp_c, state%eps_i
+    read(file_unit, *) temp_c, params%eps_i
     !ftau_d (tau_d)
-    read(file_unit, *) temp_c, state%tau_d
+    read(file_unit, *) temp_c, params%tau_d
     
     close(file_unit)
     
     !generate rest of the values
-    state%timeskip = 1.0
-    state%lambda = state%c / state%wave_freq
-    state%dx = state%lambda/state%elements_per_wave
-    state%dy = state%dx
-    state%dz = state%dx
-    state%dt = 1.0d0 * state%timeskip / (state%c * sqrt(1.0d0/(state%dx**2) + 1.0d0/(state%dy**2) + 1.0d0/(state%dz**2)))
-    state%mu_0 = 4 * state%pi*10**(-7.0)
-    state%eps_0 = 1.0/(state%mu_0 * state%c * state%c)
+    params%timeskip = 1.0
+    params%lambda = params%c / params%wave_freq
+    params%dx = params%lambda/params%elements_per_wave
+    params%dy = params%dx
+    params%dz = params%dx
+    params%dt = 1.0d0 * params%timeskip / (params%c * sqrt(1.0d0/(params%dx**2) + 1.0d0/(params%dy**2) + 1.0d0/(params%dz**2)))
+    params%mu_0 = 4 * params%pi*10**(-7.0)
+    params%eps_0 = 1.0/(params%mu_0 * params%c * params%c)
 end
 
 
-subroutine delete_fdtd_state(state)
-    type(fdtd_state), pointer, intent(inout) :: state
+subroutine delete_fdtd_state(params)
+    !input
+    type(fdtd_params), pointer, intent(inout) :: params
     
-    deallocate(state%src)
-    deallocate(state%jz)
-    deallocate(state)
+    deallocate(params%src)
+    deallocate(params%jz)
+    deallocate(params)
 end
 
 
-subroutine init_fdtd_field(field, state)
+subroutine init_fdtd_field(field, params)
     !input
     type(fdtd_field), pointer, intent(inout) :: field
-    type(fdtd_state), pointer, intent(in)    :: state
+    type(fdtd_params), pointer, intent(in)   :: params
     !local vars
     integer :: ix, iy, iz
     
     allocate(field)
     
     !Initialise H field
-    allocate(field%hx(state%nx, state%ny, state%nz))
-    allocate(field%hy(state%nx, state%ny, state%nz))
-    allocate(field%hz(state%nx, state%ny, state%nz))
+    allocate(field%hx(params%nx, params%ny, params%nz))
+    allocate(field%hy(params%nx, params%ny, params%nz))
+    allocate(field%hz(params%nx, params%ny, params%nz))
 
     field%hx = 0.0
     field%hy = 0.0
     field%hz = 0.0
     
     !Initialise D field
-    allocate(field%dx1(state%nx, state%ny, state%nz))
-    allocate(field%dx2(state%nx, state%ny, state%nz))
-    allocate(field%dx3(state%nx, state%ny, state%nz))
+    allocate(field%dx1(params%nx, params%ny, params%nz))
+    allocate(field%dx2(params%nx, params%ny, params%nz))
+    allocate(field%dx3(params%nx, params%ny, params%nz))
     
     field%dx1 = 0.0
     field%dx2 = 0.0
     field%dx3 = 0.0
 
-    allocate(field%dy1(state%nx, state%ny, state%nz))
-    allocate(field%dy2(state%nx, state%ny, state%nz))
-    allocate(field%dy3(state%nx, state%ny, state%nz))
+    allocate(field%dy1(params%nx, params%ny, params%nz))
+    allocate(field%dy2(params%nx, params%ny, params%nz))
+    allocate(field%dy3(params%nx, params%ny, params%nz))
     
     field%dy1 = 0.0
     field%dy2 = 0.0
     field%dy3 = 0.0
 
-    allocate(field%dz1(state%nx, state%ny, state%nz))
-    allocate(field%dz2(state%nx, state%ny, state%nz))
-    allocate(field%dz3(state%nx, state%ny, state%nz))
+    allocate(field%dz1(params%nx, params%ny, params%nz))
+    allocate(field%dz2(params%nx, params%ny, params%nz))
+    allocate(field%dz3(params%nx, params%ny, params%nz))
     
     field%dz1 = 0.0
     field%dz2 = 0.0
     field%dz3 = 0.0
 
     !Initialise E field
-    allocate(field%ex1(state%nx, state%ny, state%nz))
-    allocate(field%ex2(state%nx, state%ny, state%nz))
-    allocate(field%ex3(state%nx, state%ny, state%nz))
+    allocate(field%ex1(params%nx, params%ny, params%nz))
+    allocate(field%ex2(params%nx, params%ny, params%nz))
+    allocate(field%ex3(params%nx, params%ny, params%nz))
     
     field%ex1 = 0.0
     field%ex2 = 0.0
     field%ex3 = 0.0
 
-    allocate(field%ey1(state%nx, state%ny, state%nz))
-    allocate(field%ey2(state%nx, state%ny, state%nz))
-    allocate(field%ey3(state%nx, state%ny, state%nz))
+    allocate(field%ey1(params%nx, params%ny, params%nz))
+    allocate(field%ey2(params%nx, params%ny, params%nz))
+    allocate(field%ey3(params%nx, params%ny, params%nz))
     
     field%ey1 = 0.0
     field%ey2 = 0.0
     field%ey3 = 0.0
 
-    allocate(field%ez1(state%nx, state%ny, state%nz))
-    allocate(field%ez2(state%nx, state%ny, state%nz))
-    allocate(field%ez3(state%nx, state%ny, state%nz))
+    allocate(field%ez1(params%nx, params%ny, params%nz))
+    allocate(field%ez2(params%nx, params%ny, params%nz))
+    allocate(field%ez3(params%nx, params%ny, params%nz))
     
     field%ez1 = 0.0
     field%ez2 = 0.0
     field%ez3 = 0.0
 
-    allocate(field%eps_i(state%nx, state%ny, state%nz))
-    allocate(field%eps_s(state%nx, state%ny, state%nz))
+    allocate(field%eps_i(params%nx, params%ny, params%nz))
+    allocate(field%eps_s(params%nx, params%ny, params%nz))
 
-    allocate(field%tau_d(state%nx, state%ny, state%nz))
-    allocate(field%sigma(state%nx, state%ny, state%nz))
+    allocate(field%tau_d(params%nx, params%ny, params%nz))
+    allocate(field%sigma(params%nx, params%ny, params%nz))
 
     field%eps_i = 0.0
     field%eps_s = 0.0
     field%tau_d = 0.0
     field%sigma = 0.0
     
-    field%sigma = state%sigma
-    field%eps_s = state%eps_s
-    field%eps_i = state%eps_i
-    field%tau_d = state%tau_d
+    field%sigma = params%sigma
+    field%eps_s = params%eps_s
+    field%eps_i = params%eps_i
+    field%tau_d = params%tau_d
     
     !Initialise mur boundary
     !Setup rp_x
-    allocate(field%rp_x_1(2, state%ny, state%nz))
-    allocate(field%rp_x_end(state%nx-1:state%nx, state%ny, state%nz))
+    allocate(field%rp_x_1(2, params%ny, params%nz))
+    allocate(field%rp_x_end(params%nx-1:params%nx, params%ny, params%nz))
     
     field%rp_x_1 = 0.0
     field%rp_x_end = 0.0
 
-    do iz=1, state%nz
-	    do iy=1, state%ny
+    do iz=1, params%nz
+	    do iy=1, params%ny
             do ix=1, 2
                 field%rp_x_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
                                             (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                       &
-                                            (1 + cmplx(0.0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy,iz))) - &
+                                            (1 + cmplx(0.0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy,iz))) - &
                                             cmplx(0, field%sigma(ix, iy, iz) /                                          &
-                                             (2 * state%pi * state%wave_freq * state%eps_0)))
+                                             (2 * params%pi * params%wave_freq * params%eps_0)))
             end do
             
-            do ix=state%nx-1, state%nx 
+            do ix=params%nx-1, params%nx 
                 field%rp_x_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
                                                   (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
-                                                  (1 + cmplx(0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
                                                   cmplx(0, field%sigma(ix, iy, iz) /                                         &
-                                                   (2 * state%pi * state%wave_freq * state%eps_0)))
+                                                   (2 * params%pi * params%wave_freq * params%eps_0)))
             end do
 	    end do
     end do
     
     !Setup rp_y
-    allocate(field%rp_y_1(state%nx, 2, state%nz))
-    allocate(field%rp_y_end(state%nx, state%ny-1:state%ny, state%nz))
+    allocate(field%rp_y_1(params%nx, 2, params%nz))
+    allocate(field%rp_y_end(params%nx, params%ny-1:params%ny, params%nz))
     
     field%rp_y_1 = 0.0
     field%rp_y_end = 0.0
 
-    do iz=1, state%nz
-        do ix=1, state%nx 
+    do iz=1, params%nz
+        do ix=1, params%nx 
             do iy=1, 2 
                 field%rp_y_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
                                                 (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
-                                                (1.0 + cmplx(0, 2.0 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                (1.0 + cmplx(0, 2.0 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
                                                 cmplx(0, field%sigma(ix, iy, iz) /                                             &
-                                                (2.0 * state%pi * state%wave_freq * state%eps_0)))
+                                                (2.0 * params%pi * params%wave_freq * params%eps_0)))
             end do
 	    
-            do iy=state%ny-1, state%ny
+            do iy=params%ny-1, params%ny
                 field%rp_y_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
                                                   (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
-                                                  (1.0 + cmplx(0, 2.0 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  (1.0 + cmplx(0, 2.0 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
                                                   cmplx(0, field%sigma(ix, iy, iz) /                                             &
-                                                  (2 * state%pi * state%wave_freq * state%eps_0)))
+                                                  (2 * params%pi * params%wave_freq * params%eps_0)))
             end do
 	    end do
     end do
     
     !Setup rp_z
-    allocate(field%rp_z_1(state%nx, state%ny, 2))
-    allocate(field%rp_z_end(state%nx, state%ny, state%nz-1:state%nz))
+    allocate(field%rp_z_1(params%nx, params%ny, 2))
+    allocate(field%rp_z_end(params%nx, params%ny, params%nz-1:params%nz))
     
     field%rp_z_1 = 0.0
     field%rp_z_end = 0.0
 
-    do iy=1, state%ny
-        do ix=1, state%nx
+    do iy=1, params%ny
+        do ix=1, params%nx
             do iz=1, 2 
                 field%rp_z_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
                                                 (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
-                                                (1 + cmplx(0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
                                                 cmplx(0, field%sigma(ix, iy, iz) /                                         &
-                                                (2 * state%pi * state%wave_freq * state%eps_0)))
+                                                (2 * params%pi * params%wave_freq * params%eps_0)))
             end do
             
-            do iz=state%nz-1, state%nz 
+            do iz=params%nz-1, params%nz 
                 field%rp_z_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
                                                   (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
-                                                  (1 + cmplx(0, 2 * state%pi * state%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
                                                   cmplx(0, field%sigma(ix, iy, iz) /                                         &
-                                                  (2 * state%pi * state%wave_freq * state%eps_0)))
+                                                  (2 * params%pi * params%wave_freq * params%eps_0)))
             end do
 	    end do
     end do
@@ -375,12 +376,12 @@ subroutine delete_fdtd_field(field)
 end
 
 
-subroutine load_materials(state, field, specs_file_name, materials_path)
+subroutine load_materials(params, field, specs_file_name, materials_path)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field  
-    character(len=*), intent(in)          :: specs_file_name
-    character(len=*), intent(in)          :: materials_path
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field  
+    character(len=*), intent(in)           :: specs_file_name
+    character(len=*), intent(in)           :: materials_path
     !local vars
     integer, parameter                :: file_unit = 100
     integer                           :: error_code
@@ -407,20 +408,16 @@ subroutine load_materials(state, field, specs_file_name, materials_path)
     close(unit=file_unit)
     
     !load materials
-    do iz=1, state%nz
+    do iz=1, params%nz
         !generte file name, starting with v1_00001.pgm
-        write(material_file_name, fmt='(I5)'), iz
-        material_file_name = "0000" // adjustl(material_file_name)
-        material_file_name = material_file_name(len(trim(material_file_name))-4 : len(trim(material_file_name)))
-        material_file_name = materials_path // "v1_" // trim(material_file_name) // ".pgm"
-    
+        material_file_name = generate_file_name(materials_path // "v1_", ".pgm", iz)
         open(unit=file_unit, file=material_file_name, status="old", iostat=error_code)
         call check_error(error_code, "Couldn't open file "//material_file_name)
         
         read(file_unit, *) dummy_char, dummy_char, dummy_char, material_width, material_height, dummy_char
         
-        do iy=1, state%ny
-            do ix=1, state%nx
+        do iy=1, params%ny
+            do ix=1, params%nx
                 read(file_unit, *) spec_code
             
                 field%sigma(ix, iy, iz) = specs(spec_code, 1)
@@ -437,10 +434,10 @@ subroutine load_materials(state, field, specs_file_name, materials_path)
 end
 
 
-subroutine setup_source(state, field)
+subroutine setup_source(params, field)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
     !local vars
     integer :: fine
     integer :: temp
@@ -448,14 +445,14 @@ subroutine setup_source(state, field)
     integer :: istart
     real, dimension(:), allocatable :: tmpdata, tmpdata2
     
-    allocate(state%jz(1:2**16))
+    allocate(params%jz(1:2**16))
     allocate(tmpdata(-2**16:2**16))
     allocate(tmpdata2(-2**16:2**16))
     
     !fine & temp
-    fine = int(2**13 * state%pulse_width * state%wave_freq * state%dt)
+    fine = int(2**13 * params%pulse_width * params%wave_freq * params%dt)
 
-    temp = 1/(state%pulse_width * state%wave_freq)/(state%dt / fine)/2
+    temp = 1/(params%pulse_width * params%wave_freq)/(params%dt / fine)/2
     
     !tmpdata
     do i=-2**14, 2**14
@@ -467,7 +464,7 @@ subroutine setup_source(state, field)
     end do
       
     do i = -temp-1,temp+1
-      tmpdata(i) = tmpdata(i) *cos(2.0*acos(-1.0)* state%pulse_modulation_freq * state%wave_freq*i*(state%dt/fine))     
+      tmpdata(i) = tmpdata(i) *cos(2.0*acos(-1.0)* params%pulse_modulation_freq * params%wave_freq*i*(params%dt/fine))     
     enddo
 
     !istart
@@ -479,34 +476,58 @@ subroutine setup_source(state, field)
     enddo
     
     !setup jz 1/2
-    state%jz = 0.0
+    params%jz = 0.0
     
     i2 = 0
     do i=istart, temp+1, fine
           i2=i2+1
-          state%jz(i2)=tmpdata(i)*10**(-15.)/state%dt/3.0
+          params%jz(i2)=tmpdata(i)*10**(-15.)/params%dt/3.0
     end do
     
     !setup tmpdata2
     do i=2, 2**14
-        tmpdata2(i-1)=(real((state%jz(i+1)-state%jz(i))/state%dt)+real((state%jz(i)-state%jz(i-1))/state%dt)) &
-        /2.0*(state%dt*state%dz)/(state%dx*state%dy*state%dz)
+        tmpdata2(i-1)=(real((params%jz(i+1)-params%jz(i))/params%dt)+real((params%jz(i)-params%jz(i-1))/params%dt)) &
+        /2.0*(params%dt*params%dz)/(params%dx*params%dy*params%dz)
     end do
     
     !setup jz 2/2
     do i=1, 2**14
-        state%jz(i) = tmpdata2(i)
+        params%jz(i) = tmpdata2(i)
     end do
 end
 
 
-subroutine write_result(state, field, run_num, runs_count, output_path)
+subroutine print_parameters(params)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
-    integer, intent(in)                   :: run_num
-    integer, intent(in)                   :: runs_count
-    character(len=*), intent(in)          :: output_path
+    type(fdtd_params), pointer, intent(in) :: params
+    !local vars
+    integer :: i
+    
+    print "(A, 3I4)",   "Field size (x, y, z):      ", params%nx, params%ny, params%nz
+    print "(A, I4)",    "Iterations count:          ", params%runs_count
+    print "(A, A)",     "Input path:                ", trim(params%input_path)
+    print "(A, A)",     "Output path:               ", trim(params%output_path)
+    print "(A, I4)",    "Elements per wavelength:   ", params%elements_per_wave
+    print "(A, E11.3)", "Wave frequency:            ", params%wave_freq
+    print "(A, E11.3)", "Pulse width:               ", params%pulse_width
+    print "(A, E11.3)", "Pulse modulation frequency:", params%pulse_modulation_freq
+    do i=1, params%nsrc
+        print "(A, 3I4)", "Source position (x, y, z): ", params%src(i, 1:3)
+    end do
+    print "(A, E11.3)", "Default sigma:             ", params%sigma
+    print "(A, E11.3)", "Default eps_s:             ", params%eps_s
+    print "(A, E11.3)", "Default eps_i:             ", params%eps_i
+    print "(A, E11.3)", "Default tau_d:             ", params%tau_d
+end
+
+
+subroutine write_result(params, field, run_num, runs_count, output_path)
+    !input
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
+    integer, intent(in)                    :: run_num
+    integer, intent(in)                    :: runs_count
+    character(len=*), intent(in)           :: output_path
     !local vars
     integer, parameter :: file_unit = 100
     character(len=128) :: output_file_name
@@ -550,18 +571,14 @@ subroutine write_result(state, field, run_num, runs_count, output_path)
     
     !Output x
     !generte file name, starting with E_field_x_00001.out
-    write(output_file_name, fmt='(I5)'), runs_count
-    output_file_name = "0000" // adjustl(output_file_name)
-    output_file_name = output_file_name(len(trim(output_file_name))-4 : len(trim(output_file_name)))
-    output_file_name = output_path // "E_field_x_" // trim(output_file_name) // ".out"
-    
+    output_file_name = generate_file_name(output_path // "E_field_x_", ".out", runs_count)
     open(file_unit, file=output_file_name, status="new", access="sequential", form="formatted", iostat=error_code)
-    call check_error(error_code, "Couldn't open file " // output_file_name)
+    call check_error(error_code, "Couldn't create file " // output_file_name)
     
-    do i=1, state%nsrc
-        iy = state%src(i, 2)
-        iz = state%src(i, 3)
-        do ix=1, state%nx
+    do i=1, params%nsrc
+        iy = params%src(i, 2)
+        iz = params%src(i, 3)
+        do ix=1, params%nx
             write(file_unit, '(3I4, 9E11.3)') ix, iy, iz,                                                          &
                                               dx_source(ix, iy, iz), dy_source(ix, iy, iz), dz_source(ix, iy, iz), &
                                               field%hx(ix, iy, iz),  field%hy(ix, iy, iz),  field%hz(ix, iy, iz),  &
@@ -573,18 +590,14 @@ subroutine write_result(state, field, run_num, runs_count, output_path)
     
     !Output y
     !generte file name, starting with E_field_y_00001.out
-    write(output_file_name, fmt='(I5)'), runs_count
-    output_file_name = "0000" // adjustl(output_file_name)
-    output_file_name = output_file_name(len(trim(output_file_name))-4 : len(trim(output_file_name)))
-    output_file_name = output_path // "E_field_y_" // trim(output_file_name) // ".out"
-    
+    output_file_name = generate_file_name(output_path // "E_field_y_", ".out", runs_count)
     open(file_unit, file=output_file_name, status="new", access="sequential", form="formatted", iostat=error_code)
-    call check_error(error_code, "Couldn't open file " // output_file_name)
+    call check_error(error_code, "Couldn't create file " // output_file_name)
     
-    do i=1, state%nsrc
-        ix = state%src(i, 1)
-        iz = state%src(i, 3)
-        do iy=1, state%ny
+    do i=1, params%nsrc
+        ix = params%src(i, 1)
+        iz = params%src(i, 3)
+        do iy=1, params%ny
             write(file_unit, '(3I4, 9E11.3)') ix, iy, iz,                                                          &
                                               dx_source(ix, iy, iz), dy_source(ix, iy, iz), dz_source(ix, iy, iz), &
                                               field%hx(ix, iy, iz),  field%hy(ix, iy, iz),  field%hz(ix, iy, iz),  &
@@ -596,18 +609,14 @@ subroutine write_result(state, field, run_num, runs_count, output_path)
     
     !Output z
     !generte file name, starting with E_field_z_00001.out
-    write(output_file_name, fmt='(I5)'), runs_count
-    output_file_name = "0000" // adjustl(output_file_name)
-    output_file_name = output_file_name(len(trim(output_file_name))-4 : len(trim(output_file_name)))
-    output_file_name = output_path // "E_field_z_" // trim(output_file_name) // ".out"
-    
+    output_file_name = generate_file_name(output_path // "E_field_z_", ".out", runs_count)
     open(file_unit, file=output_file_name, status="new", access="sequential", form="formatted", iostat=error_code)
-    call check_error(error_code, "Couldn't open file " // output_file_name)
+    call check_error(error_code, "Couldn't create file " // output_file_name)
     
-    do i=1, state%nsrc
-        ix = state%src(i, 1)
-        iy = state%src(i, 2)
-        do iz=1, state%nz
+    do i=1, params%nsrc
+        ix = params%src(i, 1)
+        iy = params%src(i, 2)
+        do iz=1, params%nz
             write(file_unit, '(3I4, 9E11.3)') ix, iy, iz,                                                          &
                                               dx_source(ix, iy, iz), dy_source(ix, iy, iz), dz_source(ix, iy, iz), &
                                               field%hx(ix, iy, iz),  field%hy(ix, iy, iz),  field%hz(ix, iy, iz),  &

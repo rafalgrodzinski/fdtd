@@ -6,11 +6,11 @@ implicit none
 
 contains
 
-subroutine update_h_field(state, field, run_num)
+subroutine update_h_field(params, field, run_num)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
-    integer, intent(in)                   :: run_num
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
+    integer, intent(in)                    :: run_num
     !local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: ex_source
@@ -33,57 +33,51 @@ subroutine update_h_field(state, field, run_num)
     end if
     
     !Update Hx
-    do iz=1, state%nz-1
-        do iy=1, state%ny-1
-	        do ix=2, state%nx-1
-                field%hx(ix, iy, iz) = field%hx(ix, iy, iz) -             &
-                                       state%dt/(state%mu_0 * state%dy) * &
-                                       (ez_source(ix, iy+1, iz) -          &
-                                       ez_source(ix, iy, iz)) +            &
-                                       state%dt/(state%mu_0 * state%dz) * &
-                                       (ey_source(ix, iy, iz+1) -          &
-                                       ey_source(ix, iy, iz))
+    do iz=1, params%nz-1
+        do iy=1, params%ny-1
+	        do ix=2, params%nx-1
+                field%hx(ix, iy, iz) = field%hx(ix, iy, iz) -                              &
+                                       params%dt/(params%mu_0 * params%dy) *               &
+                                       (ez_source(ix, iy+1, iz) - ez_source(ix, iy, iz)) + &
+                                       params%dt/(params%mu_0 * params%dz) *               &
+                                       (ey_source(ix, iy, iz+1) - ey_source(ix, iy, iz))
             end do
 	    end do
     end do
 
     !Update Hy
-    do iz=1, state%nz-1
-        do iy=2, state%ny-1
-	        do ix=1, state%nx-1
-                field%hy(ix, iy, iz) = field%hy(ix, iy, iz) -             &
-                                       state%dt/(state%mu_0 * state%dz) * &
-                                       (ex_source(ix, iy, iz+1) -          &
-                                       ex_source(ix, iy, iz)) +            &
-                                       state%dt/(state%mu_0 * state%dx) * &
-                                       (ez_source(ix+1, iy, iz) -          &
-                                       ez_source(ix, iy, iz))
+    do iz=1, params%nz-1
+        do iy=2, params%ny-1
+	        do ix=1, params%nx-1
+                field%hy(ix, iy, iz) = field%hy(ix, iy, iz) -                              &
+                                       params%dt/(params%mu_0 * params%dz) *               &
+                                       (ex_source(ix, iy, iz+1) - ex_source(ix, iy, iz)) + &
+                                       params%dt/(params%mu_0 * params%dx) *               &
+                                       (ez_source(ix+1, iy, iz) - ez_source(ix, iy, iz))
             end do
 	    end do
     end do
 
     !Update Hz
-    do iz=2, state%nz-1
-        do iy=1, state%ny-1
-	        do ix=1, state%nx-1
-                field%hz(ix, iy, iz) = field%hz(ix, iy, iz) -             &
-                                       state%dt/(state%mu_0 * state%dx) * &
-                                       (ey_source(ix+1, iy, iz) -          &
-                                       ey_source(ix, iy, iz)) +            &
-                                       state%dt/(state%mu_0 * state%dy) * &
-                                       (ex_source(ix, iy+1, iz) -          &
-                                       ex_source(ix, iy, iz))
+    do iz=2, params%nz-1
+        do iy=1, params%ny-1
+	        do ix=1, params%nx-1
+                field%hz(ix, iy, iz) = field%hz(ix, iy, iz) -                              &
+                                       params%dt/(params%mu_0 * params%dx) *               &
+                                       (ey_source(ix+1, iy, iz) - ey_source(ix, iy, iz)) + &
+                                       params%dt/(params%mu_0 * params%dy) *               &
+                                       (ex_source(ix, iy+1, iz) - ex_source(ix, iy, iz))
             end do
 	    end do
     end do
 end
 
 
-subroutine update_d_field(state, field, run_num)
+subroutine update_d_field(params, field, run_num)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
-    integer, intent(in)                   :: run_num
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
+    integer, intent(in)                    :: run_num
     !local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: dx_target
@@ -122,49 +116,45 @@ subroutine update_d_field(state, field, run_num)
     end if
 
     !Update Dx
-    do iz=2, state%nz-1
-        do iy=2, state%ny-1
-	        do ix=1, state%nx-1
-                dx_target(ix, iy, iz) = dx_source(ix, iy, iz) + &
-                                        state%dt/state%dy * (field%hz(ix, iy, iz) - field%hz(ix, iy-1, iz)) - &
-                                        state%dt/state%dz * (field%hy(ix, iy, iz) - field%hy(ix, iy, iz-1))
+    do iz=2, params%nz-1
+        do iy=2, params%ny-1
+	        do ix=1, params%nx-1
+                dx_target(ix, iy, iz) = dx_source(ix, iy, iz) +                                                 &
+                                        params%dt/params%dy * (field%hz(ix, iy, iz) - field%hz(ix, iy-1, iz)) - &
+                                        params%dt/params%dz * (field%hy(ix, iy, iz) - field%hy(ix, iy, iz-1))
             end do
 	    end do
     end do
 
     !Update Dy
-    do iz=2, state%nz-1
-        do iy=1, state%ny-1
-	        do ix=2, state%nx-1
-                dy_target(ix, iy, iz) = dy_source(ix, iy, iz) +                     &
-                                        state%dt/state%dz * (field%hx(ix, iy, iz) - &
-                                        field%hx(ix, iy, iz-1)) -                   &
-                                        state%dt/state%dx * (field%hz(ix, iy, iz) - &
-                                        field%hz(ix-1, iy, iz))
+    do iz=2, params%nz-1
+        do iy=1, params%ny-1
+	        do ix=2, params%nx-1
+                dy_target(ix, iy, iz) = dy_source(ix, iy, iz) +                                                 &
+                                        params%dt/params%dz * (field%hx(ix, iy, iz) - field%hx(ix, iy, iz-1)) - &
+                                        params%dt/params%dx * (field%hz(ix, iy, iz) - field%hz(ix-1, iy, iz))
             end do
 	    end do
     end do
 
     !Update Dz
-    do iz=1, state%nz-1
-        do iy=2, state%ny-1
-            do ix=2, state%nx-1
-                dz_target(ix, iy, iz) = dz_source(ix, iy, iz) +                     &
-                                        state%dt/state%dx * (field%hy(ix, iy, iz) - &
-                                        field%hy(ix-1, iy, iz)) -                   &
-                                        state%dt/state%dy * (field%hx(ix, iy, iz) - &
-                                        field%hx(ix, iy-1, iz))                                
+    do iz=1, params%nz-1
+        do iy=2, params%ny-1
+            do ix=2, params%nx-1
+                dz_target(ix, iy, iz) = dz_source(ix, iy, iz) +                                                 &
+                                        params%dt/params%dx * (field%hy(ix, iy, iz) - field%hy(ix-1, iy, iz)) - &
+                                        params%dt/params%dy * (field%hx(ix, iy, iz) - field%hx(ix, iy-1, iz))                                
             end do
         end do
     end do
 end
 
 
-subroutine update_e_field(state, field, run_num)
+subroutine update_e_field(params, field, run_num)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
-    integer, intent(in)                   :: run_num
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
+    integer, intent(in)                    :: run_num
     !local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: ex_target
@@ -260,33 +250,33 @@ subroutine update_e_field(state, field, run_num)
     end if
 
     !Update Ex
-    do iz=2, state%nz-1
-        do iy=2, state%ny-1
-	        do ix=1, state%nx-1
+    do iz=2, params%nz-1
+        do iy=2, params%ny-1
+	        do ix=1, params%nx-1
                 ex_target(ix, iy, iz) = (                                                                         &
-                                         1/(2 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) + &
-                                         2 * state%dt *                                                           &
+                                         1/(2 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) + &
+                                         2 * params%dt *                                                           &
                                          (                                                                        &  
-                                          state%eps_0 * field%eps_s(ix, iy, iz) +                                 &
+                                          params%eps_0 * field%eps_s(ix, iy, iz) +                                 &
      		                              field%sigma(ix, iy, iz) * field%tau_d(ix, iy, iz)                       &
      		                             ) +                                                                      &
-     	                                 field%sigma(ix, iy, iz) * state%dt * state%dt)                           &
+     	                                 field%sigma(ix, iy, iz) * params%dt * params%dt)                           &
      	                                ) *                                                                       &
      	                                (                                                                         &
      	                                 (                                                                        &
-     	                                  4 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) +   &
-     	                                  2 * state%dt *                                                          &
+     	                                  4 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) +   &
+     	                                  2 * params%dt *                                                          &
      	                                  (                                                                       &
-     	                                   state%eps_0 * field%eps_s(ix, iy, iz) +                                &
+     	                                   params%eps_0 * field%eps_s(ix, iy, iz) +                                &
      	                                   field%sigma(ix, iy, iz) * field%tau_d(ix, iy, iz)                      &
      	                                  ) -                                                                     &
-      	                                  field%sigma(ix, iy, iz) * state%dt * state%dt                           &
+      	                                  field%sigma(ix, iy, iz) * params%dt * params%dt                           &
       	                                 ) *                                                                      &
                                          ex_source_1(ix, iy, iz) -                                                &
-     		                             (2 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz)) *  & 
+     		                             (2 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz)) *  & 
                                          ex_source_2(ix, iy, iz) +                                                &
-     		                             (2 * (state%dt + field%tau_d(ix, iy, iz))) * dx_source_1(ix, iy, iz) -   &
-     	                                 (2 * state%dt + 4 * field%tau_d(ix, iy, iz)) * dx_source_2(ix, iy, iz) + &
+     		                             (2 * (params%dt + field%tau_d(ix, iy, iz))) * dx_source_1(ix, iy, iz) -   &
+     	                                 (2 * params%dt + 4 * field%tau_d(ix, iy, iz)) * dx_source_2(ix, iy, iz) + &
      		                             (2*field%tau_d(ix, iy, iz)) * dx_source_3(ix, iy, iz)                    &
      		                            )
             end do
@@ -294,33 +284,33 @@ subroutine update_e_field(state, field, run_num)
     end do
 
     !Update Ey
-    do iz=2, state%nz-1
-        do iy=1, state%ny-1
-	        do ix=2, state%nx-1
+    do iz=2, params%nz-1
+        do iy=1, params%ny-1
+	        do ix=2, params%nx-1
                 ey_target(ix, iy, iz) = (                                                                         &
-                                         1/(2 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) + &
-                                         2 * state%dt *                                                           &
+                                         1/(2 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) + &
+                                         2 * params%dt *                                                           &
                                          (                                                                        &
-                                          state%eps_0 * field%eps_s(ix, iy, iz) +                                 &
+                                          params%eps_0 * field%eps_s(ix, iy, iz) +                                 &
      		                              field%sigma(ix, iy, iz) * field%tau_d(ix, iy, iz)                       &
      		                             ) +                                                                      &
-     	                                 field%sigma(ix, iy, iz) * state%dt * state%dt)                           &
+     	                                 field%sigma(ix, iy, iz) * params%dt * params%dt)                           &
      	                                ) *                                                                       &
                                         (                                                                         &
                                          (                                                                        &
-                                          4 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) +   &
-                    		              2 * state%dt *                                                          &  
+                                          4 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) +   &
+                    		              2 * params%dt *                                                          &  
                     		              (                                                                       &
-                    		               state%eps_0 * field%eps_s(ix, iy, iz) +                                &
+                    		               params%eps_0 * field%eps_s(ix, iy, iz) +                                &
                     		               field%sigma(ix, iy, iz) * field%tau_d(ix, iy, iz)                      &
                     		              ) -                                                                     &
-                    		              field%sigma(ix, iy, iz) * state%dt * state%dt                           &
+                    		              field%sigma(ix, iy, iz) * params%dt * params%dt                           &
                     		             ) *                                                                      &
                     		             ey_source_1(ix, iy, iz) -                                                & 
-                                		 (2 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz)) *  &
+                                		 (2 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz)) *  &
                                          ey_source_2(ix, iy, iz) +                                                &
-                                		 (2 * (state%dt + field%tau_d(ix, iy, iz))) * dy_source_1(ix, iy, iz) -   &
-     		                             (2 * state%dt + 4 * field%tau_d(ix, iy, iz)) * dy_source_2(ix, iy, iz) + &
+                                		 (2 * (params%dt + field%tau_d(ix, iy, iz))) * dy_source_1(ix, iy, iz) -   &
+     		                             (2 * params%dt + 4 * field%tau_d(ix, iy, iz)) * dy_source_2(ix, iy, iz) + &
                                 		 (2 * field%tau_d(ix, iy, iz)) * dy_source_3(ix, iy, iz)                  &
                                 		)
             end do
@@ -328,33 +318,33 @@ subroutine update_e_field(state, field, run_num)
     end do
 
     !Update Ez
-    do iz=2, state%nz-1
-        do iy=1, state%ny-1
-	        do ix=2, state%nx-1
+    do iz=2, params%nz-1
+        do iy=1, params%ny-1
+	        do ix=2, params%nx-1
                 ez_target(ix, iy, iz) = (                                                                         &
-                                         1/(2 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) + &
-                                         2 * state%dt *                                                           &
+                                         1/(2 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) + &
+                                         2 * params%dt *                                                           &
                                          (                                                                        &
-                                          state%eps_0 * field%eps_s(ix, iy, iz) +                                 &
+                                          params%eps_0 * field%eps_s(ix, iy, iz) +                                 &
      		                              field%sigma(ix, iy, iz) * field%tau_d(ix, iy, iz)                       &
      		                             ) +                                                                      &
-     	                                 field%sigma(ix, iy, iz) * state%dt * state%dt)                           &
+     	                                 field%sigma(ix, iy, iz) * params%dt * params%dt)                           &
      	                                ) *                                                                       &
                                         (                                                                         &
                                          (                                                                        &
-                                          4 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) +   &
-                    		              2 * state%dt *                                                          &  
+                                          4 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz) +   &
+                    		              2 * params%dt *                                                          &  
                     		              (                                                                       &
-                    		               state%eps_0 * field%eps_s(ix, iy, iz) +                                &
+                    		               params%eps_0 * field%eps_s(ix, iy, iz) +                                &
                     		               field%sigma(ix, iy, iz) * field%tau_d(ix, iy, iz)                      &
                     		              ) -                                                                     &
-                    		              field%sigma(ix, iy, iz) * state%dt * state%dt                           &
+                    		              field%sigma(ix, iy, iz) * params%dt * params%dt                           &
                     		             ) *                                                                      &
                     		             ez_source_1(ix, iy, iz) -                                                & 
-                                		 (2 * state%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz)) *  &
+                                		 (2 * params%eps_0 * field%eps_i(ix, iy, iz) * field%tau_d(ix, iy, iz)) *  &
                                          ez_source_2(ix, iy, iz) +                                                &
-                                		 (2 * (state%dt + field%tau_d(ix, iy, iz))) * dz_source_1(ix, iy, iz) -   &
-     		                             (2 * state%dt + 4 * field%tau_d(ix, iy, iz)) * dz_source_2(ix, iy, iz) + &
+                                		 (2 * (params%dt + field%tau_d(ix, iy, iz))) * dz_source_1(ix, iy, iz) -   &
+     		                             (2 * params%dt + 4 * field%tau_d(ix, iy, iz)) * dz_source_2(ix, iy, iz) + &
                                 		 (2 * field%tau_d(ix, iy, iz)) * dz_source_3(ix, iy, iz)                  &
                                 		)
             end do
@@ -363,12 +353,12 @@ subroutine update_e_field(state, field, run_num)
 end
 
 
-subroutine update_source(state, field, run_num, runs_count)
+subroutine update_source(params, field, run_num, runs_count)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
-    integer, intent(in)                   :: run_num
-    integer, intent(in)                   :: runs_count
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
+    integer, intent(in)                    :: run_num
+    integer, intent(in)                    :: runs_count
     !local vars
     integer :: i
     real, dimension(:,:,:), pointer :: dz_target
@@ -388,24 +378,24 @@ subroutine update_source(state, field, run_num, runs_count)
     end if
 
     !Update source
-    do i=1, state%nsrc
-        x = state%src(i, 1)
-        y = state%src(i, 2)
-        z = state%src(i, 3)
+    do i=1, params%nsrc
+        x = params%src(i, 1)
+        y = params%src(i, 2)
+        z = params%src(i, 3)
     
         dz_target(x, y, z) = dz_source(x, y, z) +                     &
-            state%dt/state%dx * (field%hy(x, y, z) - field%hy(x-1, y, z)) - &
-            state%dt/state%dy * (field%hx(x, y, z) - field%hx(x, y-1, z)) - &
-            state%jz(((runs_count-1)*3)+1)
+            params%dt/params%dx * (field%hy(x, y, z) - field%hy(x-1, y, z)) - &
+            params%dt/params%dy * (field%hx(x, y, z) - field%hx(x, y-1, z)) - &
+            params%jz(((runs_count-1)*3)+1)
     enddo
 end
 
 
-subroutine update_mur_boundary(state, field, run_num)
+subroutine update_mur_boundary(params, field, run_num)
     !input
-    type(fdtd_state), pointer, intent(in) :: state
-    type(fdtd_field), pointer, intent(in) :: field
-    integer, intent(in)                   :: run_num
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field), pointer, intent(in)  :: field
+    integer, intent(in)                    :: run_num
     !local vars
     real, dimension(:,:,:), pointer :: ex_target
     real, dimension(:,:,:), pointer :: ey_target
@@ -444,60 +434,60 @@ subroutine update_mur_boundary(state, field, run_num)
     
     !Update Ex
     iy=1
-    do iz=2, state%nz-1
-        do ix=1, state%nx-1
-            ex_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *  &
+    do iz=2, params%nz-1
+        do ix=1, params%nx-1
+            ex_target(ix, iy, iz) = 1/(params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
                                      ex_target(ix, iy+1, iz) +                                                             &
-                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     (params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
                                      ex_source(ix, iy+1, iz) -                                                             &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy,iz))) *    &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy,iz))) *    &
                                      ex_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
     
-    iy=state%ny
-    do iz=2, state%nz-1
-        do ix=1, state%nx-1
-            ex_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
+    iy=params%ny
+    do iz=2, params%nz-1
+        do ix=1, params%nx-1
+            ex_target(ix, iy, iz) = 1/(params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
                                     (                                                                                        &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
                                      ex_target(ix, iy-1, iz) +                                                               &
-                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     (params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
                                      ex_source(ix, iy-1, iz) -                                                               &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
                                      ex_source(ix, iy, iz)                                                                   &
                                     )
         end do
     end do
     
     iz=1
-    do iy=2, state%ny-1
-        do ix=1, state%nx-1
-            ex_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
+    do iy=2, params%ny-1
+        do ix=1, params%nx-1
+            ex_target(ix, iy, iz) = 1/(params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
                                      ex_target(ix, iy, iz+1) +                                                             &
-                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     (params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
                                      ex_source(ix, iy, iz+1) -                                                             &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
                                      ex_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
     
-    iz=state%nz
-    do iy=2, state%ny-1
-        do ix=1, state%nx-1
-            ex_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
+    iz=params%nz
+    do iy=2, params%ny-1
+        do ix=1, params%nx-1
+            ex_target(ix, iy, iz) = 1/(params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
                                     (                                                                                        &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
                                      ex_target(ix, iy, iz-1) +                                                               &
-                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     (params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
                                      ex_source(ix, iy, iz-1) -                                                               &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *   & 
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz))) *   & 
                                      ex_source(ix, iy, iz)                                                                   &
                                     )
         end do
@@ -505,60 +495,60 @@ subroutine update_mur_boundary(state, field, run_num)
     
     !Update Ey
     ix=1
-    do iz=2, state%nz-1
-        do iy=1, state%ny-1
-            ey_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
+    do iz=2, params%nz-1
+        do iy=1, params%ny-1
+            ey_target(ix, iy, iz) = 1/(params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
                                      ey_target(ix+1, iy, iz) +                                                             &
-                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
+                                     (params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
                                      ey_source(ix+1, iy, iz) -                                                             &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *   &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix, iy, iz))) *   &
                                      ey_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
       
-    ix=state%nx
-    do iz=2, state%nz-1
-        do iy=1, state%ny-1
-            ey_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz)))  * &
+    ix=params%nx
+    do iz=2, params%nz-1
+        do iy=1, params%ny-1
+            ey_target(ix, iy, iz) = 1/(params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix, iy, iz)))  * &
                                     (                                                                                        &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
                                      ey_source(ix-1, iy, iz) +                                                               &
-                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     (params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
                                      ey_source(ix-1, iy, iz) -                                                               &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
                                      ey_source(ix, iy, iz)                                                                   &
                                     )
         end do
     end do
       
     iz=1
-    do iy=1, state%ny-1
-        do ix=2, state%nx-1
-            ey_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
+    do iy=1, params%ny-1
+        do ix=2, params%nx-1
+            ey_target(ix, iy, iz) = 1/(params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
                                      ey_target(ix, iy,iz+1) +                                                              &
-                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
+                                     (params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz+1))) * &
                                      ey_source(ix, iy, iz+1) -                                                             &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_1(ix, iy, iz))) *   &
                                      ey_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
       
-    iz=state%nz
-    do iy=1, state%ny-1
-        do ix=2, state%nx-1
-            ey_target(ix, iy, iz) = 1/(state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
+    iz=params%nz
+    do iy=1, params%ny-1
+        do ix=2, params%nx-1
+            ey_target(ix, iy, iz) = 1/(params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz))) *  &
                                     (                                                                                        &
-                                     (state%dt - state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     (params%dt - params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
                                      ey_target(ix, iy, iz-1) +                                                               &
-                                     (state%dt + state%dz * sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
+                                     (params%dt + params%dz * sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz-1))) * &
                                      ey_source(ix, iy, iz-1) -                                                               &
-                                     (state%dt - state%dz *sqrt(state%mu_0 * state%eps_0 * field%rp_z_end(ix, iy, iz))) *    &     
+                                     (params%dt - params%dz *sqrt(params%mu_0 * params%eps_0 * field%rp_z_end(ix, iy, iz))) *    &     
                                      ey_source(ix, iy, iz)                                                                   &
                                     )
         end do
@@ -566,61 +556,61 @@ subroutine update_mur_boundary(state, field, run_num)
     
     !Update Ez
     ix=1
-    do iz=1, state%nz-1
-        do iy=2, state%ny-1
-            ez_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
+    do iz=1, params%nz-1
+        do iy=2, params%ny-1
+            ez_target(ix, iy, iz) = 1/(params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * & 
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix+1, iy, iz))) * & 
                                      ez_target(ix+1, iy, iz) +                                                             &
-                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
+                                     (params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix+1, iy, iz))) * &
                                      ez_source(ix+1, iy, iz) -                                                             & 
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_1(ix, iy, iz)))  *  &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_1(ix, iy, iz)))  *  &
                                      ez_source(ix, iy, iz)                                                                 &
                                     )
 
         end do
     end do
       
-    ix=state%nx
-    do iz=1, state%nz-1
-        do iy=2, state%ny-1
-            ez_target(ix, iy, iz) = 1/(state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *  &
+    ix=params%nx
+    do iz=1, params%nz-1
+        do iy=2, params%ny-1
+            ez_target(ix, iy, iz) = 1/(params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix, iy, iz))) *  &
                                     (                                                                                        &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
                                      ez_target(ix-1, iy, iz) +                                                               &
-                                     (state%dt + state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
+                                     (params%dt + params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix-1, iy, iz))) * &
                                      ez_source(ix-1, iy, iz) -                                                               &
-                                     (state%dt - state%dx * sqrt(state%mu_0 * state%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
+                                     (params%dt - params%dx * sqrt(params%mu_0 * params%eps_0 * field%rp_x_end(ix, iy, iz))) *   &
                                      ez_source(ix, iy, iz)                                                                   &
                                     )
          end do
       end do
       
     iy=1
-    do iz=1, state%nz-1
-        do ix=2, state%nx-1
-            ez_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *  &
+    do iz=1, params%nz-1
+        do ix=2, params%nx-1
+            ez_target(ix, iy, iz) = 1/(params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy, iz))) *  &
                                     (                                                                                      &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
                                      ez_target(ix, iy+1, iz) +                                                             & 
-                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
+                                     (params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy+1, iz))) * &
                                      ez_source(ix, iy+1, iz) -                                                             &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_1(ix, iy, iz))) *   &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_1(ix, iy, iz))) *   &
                                      ez_source(ix, iy, iz)                                                                 &
                                     )
         end do
     end do
       
-    iy=state%ny
-    do iz=1, state%nz-1
-        do ix=2, state%nx-1
-            ez_target(ix, iy, iz) = 1/(state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
+    iy=params%ny
+    do iz=1, params%nz-1
+        do ix=2, params%nx-1
+            ez_target(ix, iy, iz) = 1/(params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy, iz))) *  &
                                     (                                                                                        &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
                                      ez_target(ix, iy-1, iz) +                                                               &
-                                     (state%dt + state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
+                                     (params%dt + params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy-1, iz))) * &
                                      ez_source(ix, iy-1, iz) -                                                               &
-                                     (state%dt - state%dy * sqrt(state%mu_0 * state%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
+                                     (params%dt - params%dy * sqrt(params%mu_0 * params%eps_0 * field%rp_y_end(ix, iy, iz))) *   &
                                      ez_source(ix, iy, iz)                                                                   &
                                     )
         end do
