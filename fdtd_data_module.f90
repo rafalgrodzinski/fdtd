@@ -1,26 +1,27 @@
 module fdtd_data_module
 use utils_module
 
+
 implicit none
 
 type fdtd_params
-    !read from file
-    integer              :: nx, ny, nz
-    integer              :: runs_count
-    character(len=128)   :: input_path
-    character(len=128)   :: output_path
-    integer              :: elements_per_wave
-    real                 :: wave_freq
-    real                 :: pulse_width
-    real                 :: pulse_modulation_freq
-    integer              :: nsrc
-    integer, allocatable :: src(:,:)
-    real                 :: sigma
-    real                 :: eps_s
-    real                 :: eps_i
-    real                 :: tau_d
+    !Read from file
+    integer            :: nx, ny, nz
+    integer            :: runs_count
+    character(len=128) :: input_path
+    character(len=128) :: output_path
+    integer            :: elements_per_wave
+    real               :: wave_freq
+    real               :: pulse_width
+    real               :: pulse_modulation_freq
+    integer            :: nsrc
+    integer, pointer   :: src(:,:)
+    real               :: sigma
+    real               :: eps_s
+    real               :: eps_i
+    real               :: tau_d
     
-    !generated
+    !Generated
     real :: pi = acos(-1.0) !Delicious pie
     real :: c = 3.0 * 10.0**8 !Light speed (v in m/s)
     real :: timeskip !Time step skip
@@ -30,12 +31,12 @@ type fdtd_params
     real :: mu_0 !mu0, permeability of free space (in henry/meter)
     real :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
     
-    real, dimension(:), allocatable :: jz
+    real, dimension(:), pointer :: jz
 end type
 
 
 type fdtd_field
-    !fdtd field
+    !FDTD field
     real, dimension(:,:,:), pointer :: ex1,ex2,ex3
     real, dimension(:,:,:), pointer :: ey1,ey2,ey3 
     real, dimension(:,:,:), pointer :: ez1,ez2,ez3 
@@ -51,7 +52,7 @@ type fdtd_field
     real, dimension(:,:,:), pointer :: eps_i, eps_s
     real, dimension(:,:,:), pointer :: tau_d, sigma
 
-    !mur boundary
+    !Mur boundary
     real, dimension(:,:,:), pointer :: rp_x_1, rp_x_end
     real, dimension(:,:,:), pointer :: rp_y_1, rp_y_end
     real, dimension(:,:,:), pointer :: rp_z_1, rp_z_end
@@ -61,10 +62,11 @@ end type
 contains
 
 subroutine init_fdtd_parameters(params, file_name)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(inout) :: params
     character(len=*), intent(in)              :: file_name
-    !local vars
+    
+    !Local vars
     integer, parameter :: file_unit = 51
     integer            :: error_code
     character          :: temp_c
@@ -144,24 +146,25 @@ subroutine init_fdtd_parameters(params, file_name)
     params%dt = 1.0d0 * params%timeskip / (params%c * sqrt(1.0d0/(params%dx**2) + 1.0d0/(params%dy**2) + 1.0d0/(params%dz**2)))
     params%mu_0 = 4 * params%pi*10**(-7.0)
     params%eps_0 = 1.0/(params%mu_0 * params%c * params%c)
-end
+end subroutine
 
 
-subroutine delete_fdtd_state(params)
-    !input
+subroutine delete_fdtd_parameters(params)
+    !Input
     type(fdtd_params), pointer, intent(inout) :: params
     
     deallocate(params%src)
     deallocate(params%jz)
     deallocate(params)
-end
+end subroutine
 
 
 subroutine init_fdtd_field(field, params)
-    !input
+    !Input
     type(fdtd_field), pointer, intent(inout) :: field
     type(fdtd_params), pointer, intent(in)   :: params
-    !local vars
+    
+    !Local vars
     integer :: ix, iy, iz
     
     allocate(field)
@@ -242,91 +245,24 @@ subroutine init_fdtd_field(field, params)
     field%tau_d = params%tau_d
     
     !Initialise mur boundary
-    !Setup rp_x
     allocate(field%rp_x_1(2, params%ny, params%nz))
     allocate(field%rp_x_end(params%nx-1:params%nx, params%ny, params%nz))
     
-    field%rp_x_1 = 0.0
-    field%rp_x_end = 0.0
-
-    do iz=1, params%nz
-	    do iy=1, params%ny
-            do ix=1, 2
-                field%rp_x_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
-                                            (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                       &
-                                            (1 + cmplx(0.0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy,iz))) - &
-                                            cmplx(0, field%sigma(ix, iy, iz) /                                          &
-                                             (2 * params%pi * params%wave_freq * params%eps_0)))
-            end do
-            
-            do ix=params%nx-1, params%nx 
-                field%rp_x_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
-                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
-                                                  (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
-                                                  cmplx(0, field%sigma(ix, iy, iz) /                                         &
-                                                   (2 * params%pi * params%wave_freq * params%eps_0)))
-            end do
-	    end do
-    end do
-    
-    !Setup rp_y
     allocate(field%rp_y_1(params%nx, 2, params%nz))
     allocate(field%rp_y_end(params%nx, params%ny-1:params%ny, params%nz))
     
-    field%rp_y_1 = 0.0
-    field%rp_y_end = 0.0
-
-    do iz=1, params%nz
-        do ix=1, params%nx 
-            do iy=1, 2 
-                field%rp_y_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
-                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
-                                                (1.0 + cmplx(0, 2.0 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
-                                                cmplx(0, field%sigma(ix, iy, iz) /                                             &
-                                                (2.0 * params%pi * params%wave_freq * params%eps_0)))
-            end do
-	    
-            do iy=params%ny-1, params%ny
-                field%rp_y_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
-                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
-                                                  (1.0 + cmplx(0, 2.0 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
-                                                  cmplx(0, field%sigma(ix, iy, iz) /                                             &
-                                                  (2 * params%pi * params%wave_freq * params%eps_0)))
-            end do
-	    end do
-    end do
-    
-    !Setup rp_z
     allocate(field%rp_z_1(params%nx, params%ny, 2))
     allocate(field%rp_z_end(params%nx, params%ny, params%nz-1:params%nz))
     
     field%rp_z_1 = 0.0
     field%rp_z_end = 0.0
 
-    do iy=1, params%ny
-        do ix=1, params%nx
-            do iz=1, 2 
-                field%rp_z_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
-                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
-                                                (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
-                                                cmplx(0, field%sigma(ix, iy, iz) /                                         &
-                                                (2 * params%pi * params%wave_freq * params%eps_0)))
-            end do
-            
-            do iz=params%nz-1, params%nz 
-                field%rp_z_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
-                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
-                                                  (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
-                                                  cmplx(0, field%sigma(ix, iy, iz) /                                         &
-                                                  (2 * params%pi * params%wave_freq * params%eps_0)))
-            end do
-	    end do
-    end do
-end
+    call setup_mur_boundary(params, field)
+end subroutine
 
 
 subroutine delete_fdtd_field(field)
-    !input
+    !Input
     type(fdtd_field), pointer, intent(inout) :: field
     
     deallocate(field%ex1)
@@ -373,25 +309,26 @@ subroutine delete_fdtd_field(field)
     deallocate(field%rp_z_end)
     
     deallocate(field)
-end
+end subroutine
 
 
 subroutine load_materials(params, field, specs_file_name, materials_path)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(in) :: params
     type(fdtd_field), pointer, intent(in)  :: field  
     character(len=*), intent(in)           :: specs_file_name
     character(len=*), intent(in)           :: materials_path
-    !local vars
-    integer, parameter                :: file_unit = 100
-    integer                           :: error_code
-    real, dimension(:,:), allocatable :: specs
-    integer, parameter                :: specs_count = 94
-    integer                           :: spec_code
-    character                         :: dummy_char
-    integer                           :: ix, iy, iz
-    character(len=128)                :: material_file_name
-    integer                           :: material_width, material_height
+    
+    !Local vars
+    integer, parameter            :: file_unit = 100
+    integer                       :: error_code
+    real, dimension(:,:), pointer :: specs
+    integer, parameter            :: specs_count = 94
+    integer                       :: spec_code
+    character                     :: dummy_char
+    integer                       :: ix, iy, iz
+    character(len=128)            :: material_file_name
+    integer                       :: material_width, material_height
     
     allocate(specs(0:specs_count, 1:4))
     specs = 0.0
@@ -431,7 +368,89 @@ subroutine load_materials(params, field, specs_file_name, materials_path)
     end do
     
     deallocate(specs)
-end
+end subroutine
+
+
+subroutine setup_mur_boundary(params, field)
+    !Input
+    type(fdtd_params), pointer, intent(in) :: params
+    type(fdtd_field),  pointer, intent(in) :: field
+    
+    !Local vars
+    integer :: ix, iy, iz
+    
+    !Setup rp_x
+    field%rp_x_1 = 0.0
+    field%rp_x_end = 0.0
+
+    do iz=1, params%nz
+	    do iy=1, params%ny
+            do ix=1, 2
+                field%rp_x_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                               &
+                                            (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                       &
+                                            (1 + cmplx(0.0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy,iz))) - &
+                                            cmplx(0, field%sigma(ix, iy, iz) /                                          &
+                                             (2 * params%pi * params%wave_freq * params%eps_0)))
+            end do
+            
+            do ix=params%nx-1, params%nx 
+                field%rp_x_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
+                                                  (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) /                                         &
+                                                   (2 * params%pi * params%wave_freq * params%eps_0)))
+            end do
+	    end do
+    end do
+    
+    !Setup rp_y
+    field%rp_y_1 = 0.0
+    field%rp_y_end = 0.0
+
+    do iz=1, params%nz
+        do ix=1, params%nx 
+            do iy=1, 2 
+                field%rp_y_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
+                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
+                                                (1.0 + cmplx(0, 2.0 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                cmplx(0, field%sigma(ix, iy, iz) /                                             &
+                                                (2.0 * params%pi * params%wave_freq * params%eps_0)))
+            end do
+	    
+            do iy=params%ny-1, params%ny
+                field%rp_y_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                      &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                          &
+                                                  (1.0 + cmplx(0, 2.0 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) /                                             &
+                                                  (2 * params%pi * params%wave_freq * params%eps_0)))
+            end do
+	    end do
+    end do
+    
+    !Setup rp_z
+    field%rp_z_1 = 0.0
+    field%rp_z_end = 0.0
+
+    do iy=1, params%ny
+        do ix=1, params%nx
+            do iz=1, 2 
+                field%rp_z_1(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
+                                                (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
+                                                (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                cmplx(0, field%sigma(ix, iy, iz) /                                         &
+                                                (2 * params%pi * params%wave_freq * params%eps_0)))
+            end do
+            
+            do iz=params%nz-1, params%nz 
+                field%rp_z_end(ix, iy, iz) = real(field%eps_i(ix, iy, iz) +                                                  &
+                                                  (field%eps_s(ix, iy, iz) - field%eps_i(ix, iy, iz)) /                      &
+                                                  (1 + cmplx(0, 2 * params%pi * params%wave_freq * field%tau_d(ix, iy, iz))) - &
+                                                  cmplx(0, field%sigma(ix, iy, iz) /                                         &
+                                                  (2 * params%pi * params%wave_freq * params%eps_0)))
+            end do
+	    end do
+    end do
+end subroutine
 
 
 subroutine setup_source(params, field)
@@ -443,7 +462,7 @@ subroutine setup_source(params, field)
     integer :: temp
     integer :: i, i2
     integer :: istart
-    real, dimension(:), allocatable :: tmpdata, tmpdata2
+    real, dimension(:), pointer :: tmpdata, tmpdata2
     
     allocate(params%jz(1:2**16))
     allocate(tmpdata(-2**16:2**16))
@@ -494,7 +513,7 @@ subroutine setup_source(params, field)
     do i=1, 2**14
         params%jz(i) = tmpdata2(i)
     end do
-end
+end subroutine
 
 
 subroutine print_parameters(params)
@@ -518,22 +537,24 @@ subroutine print_parameters(params)
     print "(A, E11.3)", "Default eps_s:             ", params%eps_s
     print "(A, E11.3)", "Default eps_i:             ", params%eps_i
     print "(A, E11.3)", "Default tau_d:             ", params%tau_d
-end
+end subroutine
 
 
 subroutine write_result(params, field, run_num, runs_count, output_path)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(in) :: params
     type(fdtd_field), pointer, intent(in)  :: field
     integer, intent(in)                    :: run_num
     integer, intent(in)                    :: runs_count
     character(len=*), intent(in)           :: output_path
-    !local vars
+    
+    !Local vars
     integer, parameter :: file_unit = 100
     character(len=128) :: output_file_name
     integer            :: error_code
     integer            :: i
     integer            :: ix, iy, iz, count
+    
     real, dimension(:,:,:), pointer :: ex_source
     real, dimension(:,:,:), pointer :: ey_source
     real, dimension(:,:,:), pointer :: ez_source
@@ -542,7 +563,7 @@ subroutine write_result(params, field, run_num, runs_count, output_path)
     real, dimension(:,:,:), pointer :: dy_source
     real, dimension(:,:,:), pointer :: dz_source
     
-    !setup based on run_num 1..3
+    !Setup based on run_num 1..3
     if(run_num .eq. 1) then
         ex_source => field%ex1
         ey_source => field%ey1
@@ -570,7 +591,7 @@ subroutine write_result(params, field, run_num, runs_count, output_path)
     end if
     
     !Output x
-    !generte file name, starting with E_field_x_00001.out
+    !Generte file name, starting with E_field_x_00001.out
     output_file_name = generate_file_name(output_path // "E_field_x_", ".out", runs_count)
     open(file_unit, file=output_file_name, status="new", access="sequential", form="formatted", iostat=error_code)
     call check_error(error_code, "Couldn't create file " // output_file_name)
@@ -625,6 +646,6 @@ subroutine write_result(params, field, run_num, runs_count, output_path)
     end do
     
     close(file_unit)
-end
+end subroutine
 
-end
+end module

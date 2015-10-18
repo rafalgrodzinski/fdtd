@@ -1,5 +1,5 @@
-CC=gfortran-mp-4.9
-CFLAGS=-g -save-temps=obj
+CC=pgf90
+CFLAGS=-g -save-temps=obj -Mcuda
 OUTPUT=fdtd
 SOURCES=fdtd.f90
 
@@ -8,3 +8,6 @@ all:
     
 clean:
 	rm ${OUTPUT} *.mod *.o *.s
+
+run:
+	pjsub run.sh

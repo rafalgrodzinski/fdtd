@@ -1,17 +1,19 @@
 module fdtd_calculations_module
 use fdtd_data_module
-use utils_module
+
 
 implicit none
+
 
 contains
 
 subroutine update_h_field(params, field, run_num)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(in) :: params
     type(fdtd_field), pointer, intent(in)  :: field
     integer, intent(in)                    :: run_num
-    !local vars
+
+    !Local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: ex_source
     real, dimension(:,:,:), pointer :: ey_source
@@ -70,15 +72,16 @@ subroutine update_h_field(params, field, run_num)
             end do
 	    end do
     end do
-end
+end subroutine
 
 
 subroutine update_d_field(params, field, run_num)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(in) :: params
     type(fdtd_field), pointer, intent(in)  :: field
     integer, intent(in)                    :: run_num
-    !local vars
+
+    !Local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: dx_target
     real, dimension(:,:,:), pointer :: dy_target
@@ -88,7 +91,7 @@ subroutine update_d_field(params, field, run_num)
     real, dimension(:,:,:), pointer :: dy_source
     real, dimension(:,:,:), pointer :: dz_source
 
-    !setup based on run_num 1..3
+    !Setup based on run_num 1..3
     if(run_num .eq. 1) then
         dx_target => field%dx1
         dy_target => field%dy1
@@ -147,15 +150,16 @@ subroutine update_d_field(params, field, run_num)
             end do
         end do
     end do
-end
+end subroutine
 
 
 subroutine update_e_field(params, field, run_num)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(in) :: params
     type(fdtd_field), pointer, intent(in)  :: field
     integer, intent(in)                    :: run_num
-    !local vars
+
+    !Local vars
     integer :: ix, iy, iz
     real, dimension(:,:,:), pointer :: ex_target
     real, dimension(:,:,:), pointer :: ey_target
@@ -350,22 +354,22 @@ subroutine update_e_field(params, field, run_num)
             end do
 	    end do
     end do
-end
+end subroutine
 
 
 subroutine update_source(params, field, run_num, runs_count)
-    !input
+    !Input
     type(fdtd_params), pointer, intent(in) :: params
     type(fdtd_field), pointer, intent(in)  :: field
     integer, intent(in)                    :: run_num
     integer, intent(in)                    :: runs_count
-    !local vars
+    !Local vars
     integer :: i
     real, dimension(:,:,:), pointer :: dz_target
     real, dimension(:,:,:), pointer :: dz_source
     integer :: x, y, z
 
-    !setup based on run_num 1..3
+    !Setup based on run_num 1..3
     if(run_num .eq. 1) then
         dz_target => field%dz1
         dz_source => field%dz3
@@ -387,8 +391,8 @@ subroutine update_source(params, field, run_num, runs_count)
             params%dt/params%dx * (field%hy(x, y, z) - field%hy(x-1, y, z)) - &
             params%dt/params%dy * (field%hx(x, y, z) - field%hx(x, y-1, z)) - &
             params%jz(((runs_count-1)*3)+1)
-    enddo
-end
+    end do
+end subroutine
 
 
 subroutine update_mur_boundary(params, field, run_num)
@@ -615,6 +619,6 @@ subroutine update_mur_boundary(params, field, run_num)
                                     )
         end do
     end do
-end
+end subroutine
 
-end
+end module
