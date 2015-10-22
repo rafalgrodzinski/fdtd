@@ -1,5 +1,5 @@
 CC=pgf90
-CFLAGS=-Mcuda=cc35 -Minfo
+CFLAGS=-Mcuda -Minfo
 OUTPUT=fdtd
 SOURCES=fdtd.f90
 

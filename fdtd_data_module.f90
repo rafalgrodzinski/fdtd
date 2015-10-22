@@ -544,11 +544,11 @@ end subroutine
 
 subroutine write_result(params, field, run_num, runs_count, output_path)
     !Input
-    type(fdtd_params), intent(inout) :: params
-    type(fdtd_field), intent(inout)  :: field
-    integer, intent(in)              :: run_num
-    integer, intent(in)              :: runs_count
-    character(len=*), intent(in)     :: output_path
+    type(fdtd_params), intent(in) :: params
+    type(fdtd_field), intent(in)  :: field
+    integer, intent(in)           :: run_num
+    integer, intent(in)           :: runs_count
+    character(len=*), intent(in)  :: output_path
     
     !Local vars
     integer, parameter :: file_unit = 100

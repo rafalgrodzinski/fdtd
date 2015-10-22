@@ -8,14 +8,14 @@ use fdtd_data_module
 implicit none
 
 type fdtd_params_cuda
-    integer, device                              :: nx, ny, nz
-    integer, device                              :: nsrc
+    integer, device, allocatable                 :: nx, ny, nz
+    integer, device, allocatable                 :: nsrc
     integer, device, dimension(:,:), allocatable :: src
-    real, device :: dt !Length of the time step
-    real, device :: dx, dy, dz !Distance between 2 cells
-    real, device :: mu_0 !mu0, permeability of free space (in henry/meter)
-    real, device :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
-    real, device, dimension(:), allocatable :: jz
+    real, device, allocatable                    :: dt !Length of the time step
+    real, device, allocatable                    :: dx, dy, dz !Distance between 2 cells
+    real, device, allocatable                    :: mu_0 !mu0, permeability of free space (in henry/meter)
+    real, device, allocatable                    :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
+    real, device, dimension(:), allocatable      :: jz
 end type
 
 
@@ -51,7 +51,11 @@ subroutine init_fdtd_parameters_cuda(params_cuda, params)
     type(fdtd_params), intent(in)                      :: params
     
     allocate(params_cuda)
+    allocate(params_cuda%nx, params_cuda%ny, params_cuda%nz)
+    allocate(params_cuda%nsrc)
     allocate(params_cuda%src(size(params%src, 1), size(params%src, 2)))
+    allocate(params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
+    allocate(params_cuda%mu_0, params_cuda%eps_0)
     allocate(params_cuda%jz(size(params%jz)))
     
     params_cuda%nx = params%nx
@@ -153,7 +157,7 @@ end subroutine
 subroutine write_result_cuda(params, field, field_cuda, run_num, runs_count, output_path)
     !Input
     type(fdtd_params), intent(in)     :: params
-    type(fdtd_field), intent(in)      :: field
+    type(fdtd_field), intent(inout)   :: field
     type(fdtd_field_cuda), intent(in) :: field_cuda
     integer, intent(in)               :: run_num
     integer, intent(in)               :: runs_count

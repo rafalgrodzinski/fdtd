@@ -21,7 +21,7 @@ use fdtd_calculations_cuda_module
 implicit none
 
     !Local vars
-    integer :: i
+    integer :: i, runs_count
     integer :: args_count
     character(len=5) :: is_cuda_arg !used to check if shall be ran using cuda
     logical :: is_cuda
@@ -75,6 +75,7 @@ implicit none
     
     !Main loop
     do i=1, params%runs_count, 3
+        runs_count = (i-1)/3 + 1
         !First run
         print *, "Running iteration " // trim(str(i)) // "..."
         print *, ""
@@ -97,7 +98,8 @@ implicit none
                                                                field_cuda%hx, field_cuda%hy,                                   &
                                                                params_cuda%src, params_cuda%jz,                                &
                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
-                                                               (i-1)/3 + 1)
+                                                               params_cuda%nsrc,                                               &
+                                                               runs_count)
             
             call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
                                                                 field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
@@ -112,18 +114,19 @@ implicit none
             
             call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
                                                                      field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
-                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
-                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
-                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end,                         &
+                                                                     params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                      params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             
-            call write_result_cuda(params, field, field_dev, 1, i, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda, 1, i, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field, 1)
             call update_d_field(params, field, 1)
-            call update_source(params, field, 1, (i-1)/3 + 1)
+            call update_source(params, field, 1, runs_count)
             call update_e_field(params, field, 1)
             call update_mur_boundary(params, field, 1)
         
@@ -152,7 +155,8 @@ implicit none
                                                                field_cuda%hx, field_cuda%hy,                                   &
                                                                params_cuda%src, params_cuda%jz,                                &
                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
-                                                               (i-1)/3 + 1)
+                                                               params_cuda%nsrc,                                               &
+                                                               runs_count)
 
             call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
                                                                 field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
@@ -167,18 +171,19 @@ implicit none
 
             call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2,                 &
                                                                      field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
-                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
-                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
-                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end,                         &
+                                                                     params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                      params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             
-            call write_result_cuda(params, field, field_dev, 2, i+1, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda, 2, i+1, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field, 2)
             call update_d_field(params, field, 2)
-            call update_source(params, field, 2, (i-1)/3 + 1)
+            call update_source(params, field, 2, runs_count)
             call update_e_field(params, field, 2)
             call update_mur_boundary(params, field, 2)
         
@@ -207,7 +212,8 @@ implicit none
                                                                field_cuda%hx, field_cuda%hy,                                   &
                                                                params_cuda%src, params_cuda%jz,                                &
                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
-                                                               (i-1)/3 + 1)
+                                                               params_cuda%nsrc,                                               &
+                                                               runs_count)
 
             call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
                                                                 field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
@@ -222,9 +228,10 @@ implicit none
 
             call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
                                                                      field_cuda%ex2, field_cuda%ey2, field_cuda%ez1,                 &
-                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
-                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
-                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end,                         &
+                                                                     params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                      params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             
@@ -233,7 +240,7 @@ implicit none
         else
             call update_h_field(params, field, 3)
             call update_d_field(params, field, 3)
-            call update_source(params, field, 3, (i-1)/3 + 1)
+            call update_source(params, field, 3, runs_count)
             call update_e_field(params, field, 3)
             call update_mur_boundary(params, field, 3)
         

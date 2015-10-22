@@ -9,18 +9,18 @@ implicit none
 
 contains
 
-attributes(global) subroutine update_h_field_cuda(hx, hy, hz,
-                                                  ex_source, ey_source, ez_source,
-                                                  nx, ny, nz,
-                                                  dt, dx, dy, dz,
+attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                      &
+                                                  ex_source, ey_source, ez_source, &
+                                                  nx, ny, nz,                      &
+                                                  dt, dx, dy, dz,                  &
                                                   mu_0)
 
     !Input
-    real, dimension(:,:,:), intent(in) :: hx, hy, hz
-    real, dimension(:,:,:), intent(in) :: ex_source, ey_source, ez_source
-    integer, intent(in)                :: nx, ny, nz
-    real, intent(in)                   :: dt, dx, dy, dz
-    real, intent(in)                   :: mu_0
+    real, dimension(:,:,:), intent(inout) :: hx, hy, hz
+    real, dimension(:,:,:), intent(in)    :: ex_source, ey_source, ez_source
+    integer, intent(in)                   :: nx, ny, nz
+    real, intent(in)                      :: dt, dx, dy, dz
+    real, intent(in)                      :: mu_0
     !type(fdtd_params_cuda), intent(in) :: params
     !type(fdtd_field_cuda), intent(in)  :: field
     !integer, value, intent(in)         :: run_num
@@ -86,18 +86,18 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,
 end subroutine
 
 
-attributes(global) subroutine update_d_field_cuda(dx_target, dy_target, dz_target,
-                                                  dx_source, dy_source, dz_source,
-                                                  hx, hy, hz,
-                                                  nx, ny, nz,
+attributes(global) subroutine update_d_field_cuda(dx_target, dy_target, dz_target, &
+                                                  dx_source, dy_source, dz_source, &
+                                                  hx, hy, hz,                      &
+                                                  nx, ny, nz,                      &
                                                   dt, dx, dy, dz)
 
     !Input
-    real, dimension(:,:,:), intent(in) :: dx_target, dy_target, dz_target
-    real, dimension(:,:,:), intent(in) :: dx_source, dy_source, dz_source
-    real, dimension(:,:,:), intent(in) :: hx, hy, hz
-    integer, intent(in)                :: nx, ny, nz
-    real, intent(in)                   :: dt, dx, dy, dz
+    real, dimension(:,:,:), intent(inout) :: dx_target, dy_target, dz_target
+    real, dimension(:,:,:), intent(in)    :: dx_source, dy_source, dz_source
+    real, dimension(:,:,:), intent(in)    :: hx, hy, hz
+    integer, intent(in)                   :: nx, ny, nz
+    real, intent(in)                      :: dt, dx, dy, dz
     !type(fdtd_params_cuda), intent(in) :: params
     !type(fdtd_field_cuda), intent(in)  :: field
     !integer, value, intent(in)         :: run_num
@@ -173,27 +173,27 @@ attributes(global) subroutine update_d_field_cuda(dx_target, dy_target, dz_targe
 end subroutine
 
 
-attributes(global) subroutine update_e_field_cuda(ex_target, ey_target, ez_target, &
+attributes(global) subroutine update_e_field_cuda(ex_target, ey_target, ez_target,       &
                                                   ex_source_1, ey_source_1, ez_source_1, &
-                                                  ex_source_2, ex_source_2, ex_source_2, &
+                                                  ex_source_2, ey_source_2, ez_source_2, &
                                                   dx_source_1, dy_source_1, dz_source_1, &
                                                   dx_source_2, dy_source_2, dz_source_2, &
                                                   dx_source_3, dy_source_3, dz_source_3, &
-                                                  eps_i, eps_s, &
-                                                  tau_d, sigma, &
-                                                  nx, ny, nz, &
+                                                  eps_i, eps_s,                          &
+                                                  tau_d, sigma,                          &
+                                                  nx, ny, nz,                            &
                                                   dt, eps_0)
     !Input
-    real, dimension(:,:,:), intent(in) :: ex_target, ey_target, ez_target
-    real, dimension(:,:,:), intent(in) :: ex_source_1, ey_source_1, ez_source_1
-    real, dimension(:,:,:), intent(in) :: ex_source_2, ey_source_2, ez_source_2
-    real, dimension(:,:,:), intent(in) :: dx_source_1, dy_source_1, dz_source_1
-    real, dimension(:,:,:), intent(in) :: dx_source_2, dy_source_2, dz_source_2
-    real, dimension(:,:,:), intent(in) :: dx_source_3, dy_source_3, dz_source_3
-    real, dimension(:,:,:), intent(in) :: eps_i, eps_s
-    real, dimension(:,:,:), intent(in) :: tau_d, sigma
-    integer, intent(in)                :: nx, ny, nz
-    real, intent(in)                   :: dt, eps_0
+    real, dimension(:,:,:), intent(inout) :: ex_target, ey_target, ez_target
+    real, dimension(:,:,:), intent(in)    :: ex_source_1, ey_source_1, ez_source_1
+    real, dimension(:,:,:), intent(in)    :: ex_source_2, ey_source_2, ez_source_2
+    real, dimension(:,:,:), intent(in)    :: dx_source_1, dy_source_1, dz_source_1
+    real, dimension(:,:,:), intent(in)    :: dx_source_2, dy_source_2, dz_source_2
+    real, dimension(:,:,:), intent(in)    :: dx_source_3, dy_source_3, dz_source_3
+    real, dimension(:,:,:), intent(in)    :: eps_i, eps_s
+    real, dimension(:,:,:), intent(in)    :: tau_d, sigma
+    integer, intent(in)                   :: nx, ny, nz
+    real, intent(in)                      :: dt, eps_0
     !type(fdtd_params_cuda), intent(in) :: params
     !type(fdtd_field_cuda), intent(in)  :: field
     !integer, value, intent(in)         :: run_num
@@ -394,19 +394,22 @@ attributes(global) subroutine update_e_field_cuda(ex_target, ey_target, ez_targe
 end subroutine
 
 
-attributes(global) subroutine update_source_cuda(dz_target, dz_source,
-                                                 hx, hy,
-                                                 src, jz,
-                                                 dt, dx, dy, dz,
+attributes(global) subroutine update_source_cuda(dz_target, dz_source, &
+                                                 hx, hy,               &
+                                                 src, jz,              &
+                                                 dt, dx, dy, dz,       &
+                                                 nsrc,                 &
                                                  runs_count)
 
     !Input
-    real, dimension(:,:,:), intent(in)  :: dz_target, dz_source
-    real, dimension(:,:,:), intent(in)  :: hx, hy
-    integer, dimension(:,:), intent(in) :: src
-    real, dimension(:), intent(in)      :: jz
-    real, intent(in)                    :: dt, dx, dy, dz
-    integer, value, intent(in)          :: runs_count
+    real, dimension(:,:,:), intent(inout) :: dz_target
+    real, dimension(:,:,:), intent(in)    :: dz_source
+    real, dimension(:,:,:), intent(in)    :: hx, hy
+    integer, dimension(:,:), intent(in)   :: src
+    real, dimension(:), intent(in)        :: jz
+    real, intent(in)                      :: dt, dx, dy, dz
+    integer, intent(in)                   :: nsrc
+    integer, value, intent(in)            :: runs_count
     !type(fdtd_params_cuda), intent(in) :: params
     !type(fdtd_field_cuda), intent(in)  :: field
     !integer, value, intent(in)         :: run_num
@@ -451,22 +454,24 @@ attributes(global) subroutine update_source_cuda(dz_target, dz_source,
 end subroutine
 
 
-attributes(global) subroutine update_mur_boundary_cuda(ex_target, ey_target, ez_target,
-                                                       ex_source, ey_source, ez_source,
-                                                       rp_x_1, rp_x_end,
-                                                       rp_y_1, rp_y_end,
-                                                       rp_z_1, rp_z_end,
-                                                       dt, dx, dy, dz,
+attributes(global) subroutine update_mur_boundary_cuda(ex_target, ey_target, ez_target, &
+                                                       ex_source, ey_source, ez_source, &
+                                                       rp_x_1, rp_x_end,                &
+                                                       rp_y_1, rp_y_end,                &
+                                                       rp_z_1, rp_z_end,                &
+                                                       nx, ny, nz,                      &
+                                                       dt, dx, dy, dz,                  &
                                                        mu_0, eps_0)
 
     !Input
-    real, dimension(:,:,:), intent(in) :: ex_target, ey_target, ez_target
-    real, dimension(:,:,:), intent(in) :: ex_source, ey_source, ez_source
-    real, dimension(:,:,:), intent(in) :: rp_x_1, rp_x_end
-    real, dimension(:,:,:), intent(in) :: rp_y_1, rp_y_end
-    real, dimension(:,:,:), intent(in) :: rp_z_1, rp_z_end
-    real, intent(in)                   :: dt, dx, dy, dz
-    real, intent(in)                   :: mu_0, eps_0
+    real, dimension(:,:,:), intent(inout) :: ex_target, ey_target, ez_target
+    real, dimension(:,:,:), intent(in)    :: ex_source, ey_source, ez_source
+    real, dimension(:,:,:), intent(in)    :: rp_x_1, rp_x_end
+    real, dimension(:,:,:), intent(in)    :: rp_y_1, rp_y_end
+    real, dimension(:,:,:), intent(in)    :: rp_z_1, rp_z_end
+    integer, intent(in)                   :: nx, ny, nz
+    real, intent(in)                      :: dt, dx, dy, dz
+    real, intent(in)                      :: mu_0, eps_0
     !type(fdtd_params_cuda), intent(in) :: params
     !type(fdtd_field_cuda), intent(in)  :: field
     
