@@ -6,20 +6,20 @@ implicit none
 
 type fdtd_params
     !Read from file
-    integer            :: nx, ny, nz
-    integer            :: runs_count
-    character(len=128) :: input_path
-    character(len=128) :: output_path
-    integer            :: elements_per_wave
-    real               :: wave_freq
-    real               :: pulse_width
-    real               :: pulse_modulation_freq
-    integer            :: nsrc
-    integer, pointer   :: src(:,:)
-    real               :: sigma
-    real               :: eps_s
-    real               :: eps_i
-    real               :: tau_d
+    integer              :: nx, ny, nz
+    integer              :: runs_count
+    character(len=128)   :: input_path
+    character(len=128)   :: output_path
+    integer              :: elements_per_wave
+    real                 :: wave_freq
+    real                 :: pulse_width
+    real                 :: pulse_modulation_freq
+    integer              :: nsrc
+    integer, allocatable :: src(:,:)
+    real                 :: sigma
+    real                 :: eps_s
+    real                 :: eps_i
+    real                 :: tau_d
     
     !Generated
     real :: pi = acos(-1.0) !Delicious pie
@@ -31,31 +31,31 @@ type fdtd_params
     real :: mu_0 !mu0, permeability of free space (in henry/meter)
     real :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
     
-    real, dimension(:), pointer :: jz
+    real, dimension(:), allocatable :: jz
 end type
 
 
 type fdtd_field
     !FDTD field
-    real, dimension(:,:,:), pointer :: ex1,ex2,ex3
-    real, dimension(:,:,:), pointer :: ey1,ey2,ey3 
-    real, dimension(:,:,:), pointer :: ez1,ez2,ez3 
+    real, dimension(:,:,:), pointer :: ex1, ex2, ex3
+    real, dimension(:,:,:), pointer :: ey1, ey2, ey3 
+    real, dimension(:,:,:), pointer :: ez1, ez2, ez3 
 
-    real, dimension(:,:,:), pointer :: hx
-    real, dimension(:,:,:), pointer :: hy
-    real, dimension(:,:,:), pointer :: hz
+    real, dimension(:,:,:), allocatable :: hx
+    real, dimension(:,:,:), allocatable :: hy
+    real, dimension(:,:,:), allocatable :: hz
 
-    real, dimension(:,:,:), pointer :: dx1,dx2,dx3 
-    real, dimension(:,:,:), pointer :: dy1,dy2,dy3 
-    real, dimension(:,:,:), pointer :: dz1,dz2,dz3 
+    real, dimension(:,:,:), pointer :: dx1, dx2, dx3 
+    real, dimension(:,:,:), pointer :: dy1, dy2, dy3 
+    real, dimension(:,:,:), pointer :: dz1, dz2, dz3 
 
-    real, dimension(:,:,:), pointer :: eps_i, eps_s
-    real, dimension(:,:,:), pointer :: tau_d, sigma
+    real, dimension(:,:,:), allocatable :: eps_i, eps_s
+    real, dimension(:,:,:), allocatable :: tau_d, sigma
 
     !Mur boundary
-    real, dimension(:,:,:), pointer :: rp_x_1, rp_x_end
-    real, dimension(:,:,:), pointer :: rp_y_1, rp_y_end
-    real, dimension(:,:,:), pointer :: rp_z_1, rp_z_end
+    real, dimension(:,:,:), allocatable :: rp_x_1, rp_x_end
+    real, dimension(:,:,:), allocatable :: rp_y_1, rp_y_end
+    real, dimension(:,:,:), allocatable :: rp_z_1, rp_z_end
 end type
 
 
@@ -63,8 +63,8 @@ contains
 
 subroutine init_fdtd_parameters(params, file_name)
     !Input
-    type(fdtd_params), pointer, intent(inout) :: params
-    character(len=*), intent(in)              :: file_name
+    type(fdtd_params), allocatable, intent(inout) :: params
+    character(len=*), intent(in)                  :: file_name
     
     !Local vars
     integer, parameter :: file_unit = 51
@@ -151,7 +151,7 @@ end subroutine
 
 subroutine delete_fdtd_parameters(params)
     !Input
-    type(fdtd_params), pointer, intent(inout) :: params
+    type(fdtd_params), allocatable, intent(inout) :: params
     
     deallocate(params%src)
     deallocate(params%jz)
@@ -161,8 +161,8 @@ end subroutine
 
 subroutine init_fdtd_field(field, params)
     !Input
-    type(fdtd_field), pointer, intent(inout) :: field
-    type(fdtd_params), pointer, intent(in)   :: params
+    type(fdtd_field), allocatable, intent(inout)  :: field
+    type(fdtd_params), allocatable, intent(inout) :: params
     
     !Local vars
     integer :: ix, iy, iz
@@ -263,7 +263,7 @@ end subroutine
 
 subroutine delete_fdtd_field(field)
     !Input
-    type(fdtd_field), pointer, intent(inout) :: field
+    type(fdtd_field), allocatable, intent(inout) :: field
     
     deallocate(field%ex1)
     deallocate(field%ex2)
@@ -314,21 +314,21 @@ end subroutine
 
 subroutine load_materials(params, field, specs_file_name, materials_path)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field  
-    character(len=*), intent(in)           :: specs_file_name
-    character(len=*), intent(in)           :: materials_path
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field  
+    character(len=*), intent(in)     :: specs_file_name
+    character(len=*), intent(in)     :: materials_path
     
     !Local vars
-    integer, parameter            :: file_unit = 100
-    integer                       :: error_code
-    real, dimension(:,:), pointer :: specs
-    integer, parameter            :: specs_count = 94
-    integer                       :: spec_code
-    character                     :: dummy_char
-    integer                       :: ix, iy, iz
-    character(len=128)            :: material_file_name
-    integer                       :: material_width, material_height
+    integer, parameter                :: file_unit = 100
+    integer                           :: error_code
+    real, dimension(:,:), allocatable :: specs
+    integer, parameter                :: specs_count = 94
+    integer                           :: spec_code
+    character                         :: dummy_char
+    integer                           :: ix, iy, iz
+    character(len=128)                :: material_file_name
+    integer                           :: material_width, material_height
     
     allocate(specs(0:specs_count, 1:4))
     specs = 0.0
@@ -373,8 +373,8 @@ end subroutine
 
 subroutine setup_mur_boundary(params, field)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field),  pointer, intent(in) :: field
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field),  intent(inout) :: field
     
     !Local vars
     integer :: ix, iy, iz
@@ -454,15 +454,16 @@ end subroutine
 
 
 subroutine setup_source(params, field)
-    !input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    !local vars
+    !Input
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+
+    !Local vars
     integer :: fine
     integer :: temp
     integer :: i, i2
     integer :: istart
-    real, dimension(:), pointer :: tmpdata, tmpdata2
+    real, dimension(:), allocatable :: tmpdata, tmpdata2
     
     allocate(params%jz(1:2**16))
     allocate(tmpdata(-2**16:2**16))
@@ -517,9 +518,10 @@ end subroutine
 
 
 subroutine print_parameters(params)
-    !input
-    type(fdtd_params), pointer, intent(in) :: params
-    !local vars
+    !Input
+    type(fdtd_params), intent(inout) :: params
+
+    !Local vars
     integer :: i
     
     print "(A, 3I4)",   "Field size (x, y, z):      ", params%nx, params%ny, params%nz
@@ -542,11 +544,11 @@ end subroutine
 
 subroutine write_result(params, field, run_num, runs_count, output_path)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    integer, intent(in)                    :: run_num
-    integer, intent(in)                    :: runs_count
-    character(len=*), intent(in)           :: output_path
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+    integer, intent(in)              :: run_num
+    integer, intent(in)              :: runs_count
+    character(len=*), intent(in)     :: output_path
     
     !Local vars
     integer, parameter :: file_unit = 100

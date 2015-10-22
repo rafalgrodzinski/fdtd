@@ -4,14 +4,13 @@ use fdtd_data_module
 
 implicit none
 
-
 contains
 
 subroutine update_h_field(params, field, run_num)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    integer, intent(in)                    :: run_num
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+    integer, intent(in)              :: run_num
 
     !Local vars
     integer :: ix, iy, iz
@@ -77,9 +76,9 @@ end subroutine
 
 subroutine update_d_field(params, field, run_num)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    integer, intent(in)                    :: run_num
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+    integer, intent(in)              :: run_num
 
     !Local vars
     integer :: ix, iy, iz
@@ -155,9 +154,9 @@ end subroutine
 
 subroutine update_e_field(params, field, run_num)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    integer, intent(in)                    :: run_num
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+    integer, intent(in)              :: run_num
 
     !Local vars
     integer :: ix, iy, iz
@@ -359,10 +358,11 @@ end subroutine
 
 subroutine update_source(params, field, run_num, runs_count)
     !Input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    integer, intent(in)                    :: run_num
-    integer, intent(in)                    :: runs_count
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+    integer, intent(in)              :: run_num
+    integer, intent(in)              :: runs_count
+
     !Local vars
     integer :: i
     real, dimension(:,:,:), pointer :: dz_target
@@ -396,11 +396,12 @@ end subroutine
 
 
 subroutine update_mur_boundary(params, field, run_num)
-    !input
-    type(fdtd_params), pointer, intent(in) :: params
-    type(fdtd_field), pointer, intent(in)  :: field
-    integer, intent(in)                    :: run_num
-    !local vars
+    !Input
+    type(fdtd_params), intent(inout) :: params
+    type(fdtd_field), intent(inout)  :: field
+    integer, intent(in)              :: run_num
+
+    !Local vars
     real, dimension(:,:,:), pointer :: ex_target
     real, dimension(:,:,:), pointer :: ey_target
     real, dimension(:,:,:), pointer :: ez_target

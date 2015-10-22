@@ -1,5 +1,5 @@
 CC=pgf90
-CFLAGS=-g -save-temps=obj -Mcuda
+CFLAGS=-Mcuda=cc35 -Minfo
 OUTPUT=fdtd
 SOURCES=fdtd.f90
 

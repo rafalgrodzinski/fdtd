@@ -27,13 +27,13 @@ implicit none
     logical :: is_cuda
 
     !Calculations data
-    type(fdtd_params), pointer :: params
-    type(fdtd_field),  pointer :: field
+    type(fdtd_params), allocatable :: params
+    type(fdtd_field), allocatable  :: field
     
     !CUDA calculations data
-    type(dim3) :: grid_size, block_size
-    device, type(fdtd_params_cuda) :: params_dev
-    device, type(fdtd_field_cuda)  :: field_dev
+    type(dim3)             :: grid_size, block_size
+    type(fdtd_params_cuda), allocatable :: params_cuda
+    type(fdtd_field_cuda), allocatable  :: field_cuda
     
     !Check if any command line arguments have been passed
     args_count = command_argument_count()
@@ -66,8 +66,8 @@ implicit none
     
     !Initialize CUDA
     if(is_cuda) then
-        init_fdtd_parameters_cuda(params_dev, params)
-        init_fdtd_field_cuda(field_dev, field)
+        call init_fdtd_parameters_cuda(params_cuda, params)
+        call init_fdtd_field_cuda(field_cuda, field)
         
         block_size = dim3(params%nx, 1, 1)
         grid_size = dim3(params%ny, params%nz, 1)
@@ -79,14 +79,47 @@ implicit none
         print *, "Running iteration " // trim(str(i)) // "..."
         print *, ""
         
+        !CUDA mode
         if(is_cuda) then
-            call update_h_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 1)
-            call update_d_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 1)
-            call update_source_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 1, (i-1)/3 + 1)
-            call update_e_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 1)
-            call update_mur_boundary_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 1)
+            call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
+                                                                field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
+                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                                params_cuda%mu_0)
             
-            call write_result_cuda(params_dev, field_dev, 1, i, trim(params%output_path))
+            call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                field_cuda%hx, field_cuda%hy, field_cuda%hz,    &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz, &
+                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
+            
+            call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz1, field_cuda%dz3,                                 &
+                                                               field_cuda%hx, field_cuda%hy,                                   &
+                                                               params_cuda%src, params_cuda%jz,                                &
+                                                               params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                               (i-1)/3 + 1)
+            
+            call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                                                field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                                                field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                field_cuda%eps_i, field_cuda%eps_s,             &
+                                                                field_cuda%tau_d, field_cuda%sigma,             &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz, &
+                                                                params_cuda%dt, params_cuda%eps_0)
+            
+            call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
+                                                                     field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
+                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
+                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
+                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                                     params_cuda%mu_0, params_cuda%eps_0)
+            
+            call write_result_cuda(params, field, field_dev, 1, i, trim(params%output_path))
+        !CPU mode
         else
             call update_h_field(params, field, 1)
             call update_d_field(params, field, 1)
@@ -101,14 +134,47 @@ implicit none
         print *, "Running iteration " // trim(str(i+1)) // "..."
         print *, ""
         
+        !CUDA mode
         if(is_cuda) then
-            call update_h_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 2)
-            call update_d_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 2)
-            call update_source_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 2, (i-1)/3 + 1)
-            call update_e_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 2)
-            call update_mur_boundary_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 2)
+            call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
+                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
+                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                                params_cuda%mu_0)
             
-            call write_result_cuda(params_dev, field_dev, 2, i+1, trim(params%output_path))
+            call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                field_cuda%hx, field_cuda%hy, field_cuda%hz,    &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz, &
+                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
+            
+            call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz2, field_cuda%dz1,                                 &
+                                                               field_cuda%hx, field_cuda%hy,                                   &
+                                                               params_cuda%src, params_cuda%jz,                                &
+                                                               params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                               (i-1)/3 + 1)
+
+            call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                                                field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                field_cuda%eps_i, field_cuda%eps_s,             &
+                                                                field_cuda%tau_d, field_cuda%sigma,             &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz, &
+                                                                params_cuda%dt, params_cuda%eps_0)
+
+            call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2,                 &
+                                                                     field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
+                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
+                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
+                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                                     params_cuda%mu_0, params_cuda%eps_0)
+            
+            call write_result_cuda(params, field, field_dev, 2, i+1, trim(params%output_path))
+        !CPU mode
         else
             call update_h_field(params, field, 2)
             call update_d_field(params, field, 2)
@@ -123,14 +189,47 @@ implicit none
         print *, "Running iteration " // trim(str(i+2)) // "..."
         print *, ""
         
+        !CUDA mode
         if(is_cuda) then
-            call update_h_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 3)
-            call update_d_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 3)
-            call update_source_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 3, (i-1)/3 + 1)
-            call update_e_field_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 3)
-            call update_mur_boundary_cuda<<<grid_size, block_size>>>(params_dev, field_dev, 3)
+            call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
+                                                                field_cuda%ex2, field_cuda%ey2, field_cuda%ez2,                 &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
+                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                                params_cuda%mu_0)
+           
+            call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                field_cuda%hx, field_cuda%hy, field_cuda%hz,    &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz, &
+                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
             
-            call write_result_cuda(params_dev, field_dev, 3, i+2, trim(params%output_path))
+            call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz3, field_cuda%dz2,                                 &
+                                                               field_cuda%hx, field_cuda%hy,                                   &
+                                                               params_cuda%src, params_cuda%jz,                                &
+                                                               params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                               (i-1)/3 + 1)
+
+            call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                                                field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                field_cuda%eps_i, field_cuda%eps_s,             &
+                                                                field_cuda%tau_d, field_cuda%sigma,             &
+                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz, &
+                                                                params_cuda%dt, params_cuda%eps_0)
+
+            call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
+                                                                     field_cuda%ex2, field_cuda%ey2, field_cuda%ez1,                 &
+                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
+                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
+                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
+                                                                     params_cuda%mu_0, params_cuda%eps_0)
+            
+            call write_result_cuda(params, field, field_cuda, 3, i+2, trim(params%output_path))
+        !CPU mode
         else
             call update_h_field(params, field, 3)
             call update_d_field(params, field, 3)
