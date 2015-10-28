@@ -1,4 +1,4 @@
-nx_ny_nz: 265 490 200 
+nx_ny_nz: 100 100 100 
 t_max: 10
 nf: 1
 env_set_dir: "data/pgmdata/"
@@ -18,7 +18,7 @@ wave_frequency: 3.0D9
 pulse_width: 0.5
 pulse_modulation_frequency: 0
 number_of_excitation_sources: 1
-source_location: 132 245 92
+source_location: 50 50 50
 pulse_type: 2
 fsigma: 0
 feps_s: 1

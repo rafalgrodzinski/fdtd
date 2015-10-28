@@ -19,9 +19,8 @@ use fdtd_calculations_cuda_module
 
 
 implicit none
-
     !Local vars
-    integer :: i
+    integer :: i, runs_count
     integer :: args_count
     character(len=5) :: is_cuda_arg !used to check if shall be ran using cuda
     logical :: is_cuda
@@ -31,10 +30,13 @@ implicit none
     type(fdtd_field), allocatable  :: field
     
     !CUDA calculations data
-    type(dim3)             :: grid_size, block_size
+    type(dim3)                          :: grid_size, block_size
     type(fdtd_params_cuda), allocatable :: params_cuda
     type(fdtd_field_cuda), allocatable  :: field_cuda
-    
+    integer :: cuda_stat
+
+    is_cuda = .false.
+
     !Check if any command line arguments have been passed
     args_count = command_argument_count()
     if(args_count .ge. 1) then
@@ -63,18 +65,31 @@ implicit none
     call load_materials(params, field, "data/mat_specs_riken", trim(params%input_path))
     call setup_source(params, field)
     print *, ""
-    
+
     !Initialize CUDA
     if(is_cuda) then
+        print *, "Initializing GPU parameters..."
         call init_fdtd_parameters_cuda(params_cuda, params)
+        print *, ""
+
+        print *, "Initializing GPU field..."
         call init_fdtd_field_cuda(field_cuda, field)
+        print *, ""
         
         block_size = dim3(params%nx, 1, 1)
         grid_size = dim3(params%ny, params%nz, 1)
     end if
+
+    if(is_cuda) then
+        print *, "Computation using GPU"
+    else
+        print *, "Computation using CPU"
+    end if
+    print *, ""
     
     !Main loop
     do i=1, params%runs_count, 3
+        runs_count = (i-1)/3 + 1
         !First run
         print *, "Running iteration " // trim(str(i)) // "..."
         print *, ""
@@ -86,18 +101,22 @@ implicit none
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                 params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                 params_cuda%mu_0)
-            
+            cuda_stat = cudaDeviceSynchronize()
+
             call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
                                                                 field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
                                                                 field_cuda%hx, field_cuda%hy, field_cuda%hz,    &
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz, &
                                                                 params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
-            
+            cuda_stat = cudaDeviceSynchronize()
+ 
             call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz1, field_cuda%dz3,                                 &
                                                                field_cuda%hx, field_cuda%hy,                                   &
                                                                params_cuda%src, params_cuda%jz,                                &
                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
-                                                               (i-1)/3 + 1)
+                                                               params_cuda%nsrc,                                               &
+                                                               runs_count)
+            cuda_stat = cudaDeviceSynchronize()
             
             call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
                                                                 field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
@@ -109,21 +128,24 @@ implicit none
                                                                 field_cuda%tau_d, field_cuda%sigma,             &
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz, &
                                                                 params_cuda%dt, params_cuda%eps_0)
+            cuda_stat = cudaDeviceSynchronize()
             
             call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
                                                                      field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
-                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
-                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
-                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end,                         &
+                                                                     params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                      params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                      params_cuda%mu_0, params_cuda%eps_0)
+            cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_dev, 1, i, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda, 1, i, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field, 1)
             call update_d_field(params, field, 1)
-            call update_source(params, field, 1, (i-1)/3 + 1)
+            call update_source(params, field, 1, runs_count)
             call update_e_field(params, field, 1)
             call update_mur_boundary(params, field, 1)
         
@@ -141,18 +163,22 @@ implicit none
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                 params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                 params_cuda%mu_0)
+            cuda_stat = cudaDeviceSynchronize()
             
             call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
                                                                 field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
                                                                 field_cuda%hx, field_cuda%hy, field_cuda%hz,    &
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz, &
                                                                 params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
+            cuda_stat = cudaDeviceSynchronize()
             
             call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz2, field_cuda%dz1,                                 &
                                                                field_cuda%hx, field_cuda%hy,                                   &
                                                                params_cuda%src, params_cuda%jz,                                &
                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
-                                                               (i-1)/3 + 1)
+                                                               params_cuda%nsrc,                                               &
+                                                               runs_count)
+            cuda_stat = cudaDeviceSynchronize()
 
             call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
                                                                 field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
@@ -164,21 +190,24 @@ implicit none
                                                                 field_cuda%tau_d, field_cuda%sigma,             &
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz, &
                                                                 params_cuda%dt, params_cuda%eps_0)
+            cuda_stat = cudaDeviceSynchronize()
 
             call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2,                 &
                                                                      field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
-                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
-                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
-                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end,                         &
+                                                                     params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                      params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                      params_cuda%mu_0, params_cuda%eps_0)
+            cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_dev, 2, i+1, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda, 2, i+1, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field, 2)
             call update_d_field(params, field, 2)
-            call update_source(params, field, 2, (i-1)/3 + 1)
+            call update_source(params, field, 2, runs_count)
             call update_e_field(params, field, 2)
             call update_mur_boundary(params, field, 2)
         
@@ -196,18 +225,22 @@ implicit none
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                 params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                 params_cuda%mu_0)
+            cuda_stat = cudaDeviceSynchronize()
            
             call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
                                                                 field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
                                                                 field_cuda%hx, field_cuda%hy, field_cuda%hz,    &
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz, &
                                                                 params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
+            cuda_stat = cudaDeviceSynchronize()
             
             call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz3, field_cuda%dz2,                                 &
                                                                field_cuda%hx, field_cuda%hy,                                   &
                                                                params_cuda%src, params_cuda%jz,                                &
                                                                params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
-                                                               (i-1)/3 + 1)
+                                                               params_cuda%nsrc,                                               &
+                                                               runs_count)
+            cuda_stat = cudaDeviceSynchronize()
 
             call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
                                                                 field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
@@ -219,26 +252,28 @@ implicit none
                                                                 field_cuda%tau_d, field_cuda%sigma,             &
                                                                 params_cuda%nx, params_cuda%ny, params_cuda%nz, &
                                                                 params_cuda%dt, params_cuda%eps_0)
+            cuda_stat = cudaDeviceSynchronize()
 
             call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
                                                                      field_cuda%ex2, field_cuda%ey2, field_cuda%ez1,                 &
-                                                                     field_cuda%rp_x_1, rp_x_end,                                    &
-                                                                     field_cuda%rp_y_1, rp_y_end,                                    &
-                                                                     field_cuda%rp_z_1, rp_z_end,                                    &
+                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end,                         &
+                                                                     params_cuda%nx, params_cuda%ny, params_cuda%nz,                 &
                                                                      params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz, &
                                                                      params_cuda%mu_0, params_cuda%eps_0)
+            cuda_stat = cudaDeviceSynchronize()
             
             call write_result_cuda(params, field, field_cuda, 3, i+2, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field, 3)
             call update_d_field(params, field, 3)
-            call update_source(params, field, 3, (i-1)/3 + 1)
+            call update_source(params, field, 3, runs_count)
             call update_e_field(params, field, 3)
             call update_mur_boundary(params, field, 3)
         
             call write_result(params, field, 3, i+2, trim(params%output_path))
         end if
     end do
-
 end program

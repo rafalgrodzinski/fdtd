@@ -1,4 +1,5 @@
 module utils_module
+
 implicit none
 
 contains
@@ -12,7 +13,7 @@ subroutine check_error(error_code, message)
         print '(A, I3, A, A)', "Error, Code ", error_code, ": ", message
         stop
     endif
-end
+end subroutine
 
 
 character(len=128) function str(i)
@@ -21,7 +22,7 @@ character(len=128) function str(i)
     
     write (str, *) i
     str = adjustl(str)
-end
+end function
 
 
 character(len=128) function generate_file_name(prefix, postfix, number)
@@ -34,6 +35,6 @@ character(len=128) function generate_file_name(prefix, postfix, number)
     generate_file_name = "0000" // adjustl(generate_file_name)
     generate_file_name = generate_file_name(len(trim(generate_file_name))-4 : len(trim(generate_file_name)))
     generate_file_name = prefix // trim(generate_file_name) // postfix
-end
+end function
 
-end
+end module

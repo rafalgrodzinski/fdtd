@@ -1,21 +1,20 @@
 module fdtd_data_cuda_module
 
 use cudafor
-
 use fdtd_data_module
 
 
 implicit none
 
 type fdtd_params_cuda
-    integer, device                              :: nx, ny, nz
-    integer, device                              :: nsrc
+    integer, device, allocatable                 :: nx, ny, nz
+    integer, device, allocatable                 :: nsrc
     integer, device, dimension(:,:), allocatable :: src
-    real, device :: dt !Length of the time step
-    real, device :: dx, dy, dz !Distance between 2 cells
-    real, device :: mu_0 !mu0, permeability of free space (in henry/meter)
-    real, device :: eps_0 !Epsilon0, permittivity of free space (in farad/meter)
-    real, device, dimension(:), allocatable :: jz
+    real, device, allocatable                    :: dt
+    real, device, allocatable                    :: dx, dy, dz
+    real, device, allocatable                    :: mu_0
+    real, device, allocatable                    :: eps_0
+    real, device, dimension(:), allocatable      :: jz
 end type
 
 
@@ -47,11 +46,16 @@ contains
 
 subroutine init_fdtd_parameters_cuda(params_cuda, params)
     !Input
-    type(fdtd_params_cuda), allocatable, intent(inout) :: params_cuda
+    type(fdtd_params_cuda), intent(inout), allocatable :: params_cuda
     type(fdtd_params), intent(in)                      :: params
     
     allocate(params_cuda)
-    allocate(params_cuda%src(size(params%src, 1), size(params%src, 2)))
+    
+    allocate(params_cuda%nx, params_cuda%ny, params_cuda%nz)
+    allocate(params_cuda%nsrc)
+    allocate(params_cuda%src(params%nsrc, 1:3))
+    allocate(params_cuda%dt, params_cuda%dx, params_cuda%dy, params_cuda%dz)
+    allocate(params_cuda%mu_0, params_cuda%eps_0)
     allocate(params_cuda%jz(size(params%jz)))
     
     params_cuda%nx = params%nx
@@ -71,7 +75,7 @@ end subroutine
 
 subroutine init_fdtd_field_cuda(field_cuda, field)
     !Input
-    type(fdtd_field_cuda), allocatable, intent(inout) :: field_cuda
+    type(fdtd_field_cuda), intent(inout), allocatable :: field_cuda
     type(fdtd_field), intent(in)                      :: field
     
     allocate(field_cuda)
@@ -153,12 +157,12 @@ end subroutine
 subroutine write_result_cuda(params, field, field_cuda, run_num, runs_count, output_path)
     !Input
     type(fdtd_params), intent(in)     :: params
-    type(fdtd_field), intent(in)      :: field
+    type(fdtd_field), intent(inout)   :: field
     type(fdtd_field_cuda), intent(in) :: field_cuda
     integer, intent(in)               :: run_num
     integer, intent(in)               :: runs_count
     character(len=*), intent(in)      :: output_path
-    
+
     !Copy over results from GPU to RAM
     field%ex1 = field_cuda%ex1
     field%ex2 = field_cuda%ex2
