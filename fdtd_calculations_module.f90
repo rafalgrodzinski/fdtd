@@ -7,32 +7,22 @@ implicit none
 
 contains
 
-subroutine update_h_field(params, field, run_num)
+subroutine update_h_field(params, field,                   &
+						  ex_source, ey_source, ez_source, &
+						  run_num)
+
     !Input
-    type(fdtd_params), intent(inout) :: params
-    type(fdtd_field), intent(inout)  :: field
-    integer, intent(in)              :: run_num
+    type(fdtd_params), intent(inout)   :: params
+    type(fdtd_field), intent(inout)    :: field
+
+	real, dimension(:,:,:), intent(in) :: ex_source
+    real, dimension(:,:,:), intent(in) :: ey_source
+    real, dimension(:,:,:), intent(in) :: ez_source
+
+    integer, intent(in)                :: run_num
 
     !Local vars
     integer :: ix, iy, iz
-    real, dimension(:,:,:), pointer :: ex_source
-    real, dimension(:,:,:), pointer :: ey_source
-    real, dimension(:,:,:), pointer :: ez_source
-    
-    !setup based on run_num 1..3
-    if(run_num .eq. 1) then
-        ex_source => field%ex3
-        ey_source => field%ey3
-        ez_source => field%ez3
-    else if(run_num .eq. 2) then
-        ex_source => field%ex1
-        ey_source => field%ey1
-        ez_source => field%ez1
-    else
-        ex_source => field%ex2
-        ey_source => field%ey2
-        ez_source => field%ez2
-    end if
     
     !Update Hx
     do iz=1, params%nz-1
@@ -75,48 +65,27 @@ subroutine update_h_field(params, field, run_num)
 end subroutine
 
 
-subroutine update_d_field(params, field, run_num)
+subroutine update_d_field(params, field,                   &
+ 						  dx_target, dy_target, dz_target, &
+ 						  dx_source, dy_source, dz_source, &
+						  run_num)
+
     !Input
-    type(fdtd_params), intent(inout) :: params
-    type(fdtd_field), intent(inout)  :: field
-    integer, intent(in)              :: run_num
+    type(fdtd_params), intent(inout) 	  :: params
+    type(fdtd_field), intent(inout)  	  :: field
+
+	real, dimension(:,:,:), intent(inout) :: dx_target
+    real, dimension(:,:,:), intent(inout) :: dy_target
+    real, dimension(:,:,:), intent(inout) :: dz_target
+
+    real, dimension(:,:,:), intent(in)    :: dx_source
+    real, dimension(:,:,:), intent(in)    :: dy_source
+    real, dimension(:,:,:), intent(in)    :: dz_source
+
+    integer, intent(in)              	  :: run_num
 
     !Local vars
     integer :: ix, iy, iz
-    real, dimension(:,:,:), pointer :: dx_target
-    real, dimension(:,:,:), pointer :: dy_target
-    real, dimension(:,:,:), pointer :: dz_target
-    
-    real, dimension(:,:,:), pointer :: dx_source
-    real, dimension(:,:,:), pointer :: dy_source
-    real, dimension(:,:,:), pointer :: dz_source
-
-    !Setup based on run_num 1..3
-    if(run_num .eq. 1) then
-        dx_target => field%dx1
-        dy_target => field%dy1
-        dz_target => field%dz1
-        
-        dx_source => field%dx3
-        dy_source => field%dy3
-        dz_source => field%dz3
-    else if(run_num .eq. 2) then
-        dx_target => field%dx2
-        dy_target => field%dy2
-        dz_target => field%dz2
-        
-        dx_source => field%dx1
-        dy_source => field%dy1        
-        dz_source => field%dz1
-    else
-        dx_target => field%dx3
-        dy_target => field%dy3
-        dz_target => field%dz3
-
-        dx_source => field%dx2        
-        dy_source => field%dy2        
-        dz_source => field%dz2
-    end if
 
     !Update Dx
     do iz=2, params%nz-1
@@ -153,105 +122,47 @@ subroutine update_d_field(params, field, run_num)
 end subroutine
 
 
-subroutine update_e_field(params, field, run_num)
+subroutine update_e_field(params, field,                         &
+                          ex_target, ey_target, ez_target,       &
+                          ex_source_1, ey_source_1, ez_source_1, &
+                          ex_source_2, ey_source_2, ez_source_2, &
+                          dx_source_1, dy_source_1, dz_source_1, &
+                          dx_source_2, dy_source_2, dz_source_2, &
+                          dx_source_3, dy_source_3, dz_source_3, &
+                          run_num)
+
     !Input
-    type(fdtd_params), intent(inout) :: params
-    type(fdtd_field), intent(inout)  :: field
-    integer, intent(in)              :: run_num
+    type(fdtd_params), intent(inout)      :: params
+    type(fdtd_field), intent(inout)       :: field
+
+	real, dimension(:,:,:), intent(inout) :: ex_target
+    real, dimension(:,:,:), intent(inout) :: ey_target
+    real, dimension(:,:,:), intent(inout) :: ez_target
+
+	real, dimension(:,:,:), intent(in)    :: ex_source_1
+	real, dimension(:,:,:), intent(in)    :: ey_source_1
+	real, dimension(:,:,:), intent(in)    :: ez_source_1
+	
+	real, dimension(:,:,:), intent(in)    :: ex_source_2
+	real, dimension(:,:,:), intent(in)    :: ey_source_2
+	real, dimension(:,:,:), intent(in)    :: ez_source_2
+
+    real, dimension(:,:,:), intent(in)    :: dx_source_1
+    real, dimension(:,:,:), intent(in)    :: dy_source_1
+    real, dimension(:,:,:), intent(in)    :: dz_source_1
+    
+    real, dimension(:,:,:), intent(in)    :: dx_source_2
+    real, dimension(:,:,:), intent(in)    :: dy_source_2
+    real, dimension(:,:,:), intent(in)    :: dz_source_2
+    
+    real, dimension(:,:,:), intent(in)    :: dx_source_3
+    real, dimension(:,:,:), intent(in)    :: dy_source_3
+    real, dimension(:,:,:), intent(in)    :: dz_source_3
+    
+	integer, intent(in) 			      :: run_num
 
     !Local vars
     integer :: ix, iy, iz
-    real, dimension(:,:,:), pointer :: ex_target
-    real, dimension(:,:,:), pointer :: ey_target
-    real, dimension(:,:,:), pointer :: ez_target
-    
-    real, dimension(:,:,:), pointer :: ex_source_1
-    real, dimension(:,:,:), pointer :: ex_source_2
-    real, dimension(:,:,:), pointer :: dx_source_1
-    real, dimension(:,:,:), pointer :: dx_source_2
-    real, dimension(:,:,:), pointer :: dx_source_3
-    
-    real, dimension(:,:,:), pointer :: ey_source_1
-    real, dimension(:,:,:), pointer :: ey_source_2
-    real, dimension(:,:,:), pointer :: dy_source_1
-    real, dimension(:,:,:), pointer :: dy_source_2
-    real, dimension(:,:,:), pointer :: dy_source_3
-    
-    real, dimension(:,:,:), pointer :: ez_source_1
-    real, dimension(:,:,:), pointer :: ez_source_2
-    real, dimension(:,:,:), pointer :: dz_source_1
-    real, dimension(:,:,:), pointer :: dz_source_2
-    real, dimension(:,:,:), pointer :: dz_source_3
-
-    !setup based on run_num 1..3
-    if(run_num .eq. 1) then
-        ex_target => field%ex1
-        ey_target => field%ey1
-        ez_target => field%ez1
-        
-        ex_source_1 => field%ex3
-        ex_source_2 => field%ex2
-        dx_source_1 => field%dx1
-        dx_source_2 => field%dx3
-        dx_source_3 => field%dx2
-
-        ey_source_1 => field%ey3
-        ey_source_2 => field%ey2
-        dy_source_1 => field%dy1
-        dy_source_2 => field%dy3
-        dy_source_3 => field%dy2
-
-        ez_source_1 => field%ez3
-        ez_source_2 => field%ez2
-        dz_source_1 => field%dz1
-        dz_source_2 => field%dz3
-        dz_source_3 => field%dz2
-    else if(run_num .eq. 2) then
-        ex_target => field%ex2
-        ey_target => field%ey2
-        ez_target => field%ez2
-        
-        ex_source_1 => field%ex1
-        ex_source_2 => field%ex3
-        dx_source_1 => field%dx2
-        dx_source_2 => field%dx1
-        dx_source_3 => field%dx3
-
-        ey_source_1 => field%ey1
-        ey_source_2 => field%ey3
-        dy_source_1 => field%dy2
-        dy_source_2 => field%dy1
-        dy_source_3 => field%dy3
-
-        ez_source_1 => field%ez1
-        ez_source_2 => field%ez3
-        dz_source_1 => field%dz2
-        dz_source_2 => field%dz1
-        dz_source_3 => field%dz3
-    else
-        ex_target => field%ex3
-        ey_target => field%ey3
-        ez_target => field%ez3
-        
-        ex_source_1 => field%ex2
-        ex_source_2 => field%ex1
-        dx_source_1 => field%dx3
-        dx_source_2 => field%dx2
-        dx_source_3 => field%dx1
-
-        ey_source_1 => field%ey2
-        ey_source_2 => field%ey1
-        dy_source_1 => field%dy3
-        dy_source_2 => field%dy2
-        dy_source_3 => field%dy1
-
-        ez_source_1 => field%ez2
-        ez_source_2 => field%ez1
-        dz_source_1 => field%dz3
-        dz_source_2 => field%dz2
-        dz_source_3 => field%dz1
-    
-    end if
 
     !Update Ex
     do iz=2, params%nz-1
@@ -357,30 +268,23 @@ subroutine update_e_field(params, field, run_num)
 end subroutine
 
 
-subroutine update_source(params, field, run_num, runs_count)
+subroutine update_source(params, field,        &
+						 dz_target, dz_source, &
+                         run_num, runs_count)
+
     !Input
-    type(fdtd_params), intent(inout) :: params
-    type(fdtd_field), intent(inout)  :: field
-    integer, intent(in)              :: run_num
-    integer, intent(in)              :: runs_count
+    type(fdtd_params), intent(inout)      :: params
+    type(fdtd_field), intent(inout)       :: field
+    
+	real, dimension(:,:,:), intent(inout) :: dz_target
+    real, dimension(:,:,:), intent(in)    :: dz_source
+    
+    integer, intent(in)                   :: run_num
+    integer, intent(in)                   :: runs_count
 
     !Local vars
     integer :: i
-    real, dimension(:,:,:), pointer :: dz_target
-    real, dimension(:,:,:), pointer :: dz_source
     integer :: x, y, z
-
-    !Setup based on run_num 1..3
-    if(run_num .eq. 1) then
-        dz_target => field%dz1
-        dz_source => field%dz3
-    else if(run_num .eq. 2) then
-        dz_target => field%dz2
-        dz_source => field%dz1
-    else
-        dz_target => field%dz3
-        dz_source => field%dz2
-    end if
 
     !Update source
     do i=1, params%nsrc
@@ -396,48 +300,28 @@ subroutine update_source(params, field, run_num, runs_count)
 end subroutine
 
 
-subroutine update_mur_boundary(params, field, run_num)
+subroutine update_mur_boundary(params, field,                   &
+                               ex_target, ey_target, ez_target, &
+                               ex_source, ey_source, ez_source, &
+                               run_num)
+
     !Input
-    type(fdtd_params), intent(inout) :: params
-    type(fdtd_field), intent(inout)  :: field
-    integer, intent(in)              :: run_num
+    type(fdtd_params), intent(inout)      :: params
+    type(fdtd_field), intent(inout)       :: field
+
+	real, dimension(:,:,:), intent(inout) :: ex_target
+    real, dimension(:,:,:), intent(inout) :: ey_target
+    real, dimension(:,:,:), intent(inout) :: ez_target
+
+    real, dimension(:,:,:), intent(in)    :: ex_source
+    real, dimension(:,:,:), intent(in)    :: ey_source
+    real, dimension(:,:,:), intent(in)    :: ez_source
+
+    integer, intent(in)                   :: run_num
 
     !Local vars
-    real, dimension(:,:,:), pointer :: ex_target
-    real, dimension(:,:,:), pointer :: ey_target
-    real, dimension(:,:,:), pointer :: ez_target
-    real, dimension(:,:,:), pointer :: ex_source
-    real, dimension(:,:,:), pointer :: ey_source
-    real, dimension(:,:,:), pointer :: ez_source
     integer :: ix, iy, iz
-    
-    !Setup based on run_num 1..3
-    if(run_num .eq. 1) then
-        ex_target => field%ex1
-        ey_target => field%ey1
-        ez_target => field%ez1
-        
-        ex_source => field%ex3
-        ey_source => field%ey3
-        ez_source => field%ez3
-    else if(run_num .eq. 2) then
-        ex_target => field%ex2
-        ey_target => field%ey2
-        ez_target => field%ez2
-        
-        ex_source => field%ex1
-        ey_source => field%ey1
-        ez_source => field%ez1
-    else
-        ex_target => field%ex3
-        ey_target => field%ey3
-        ez_target => field%ez3
-        
-        ex_source => field%ex2
-        ey_source => field%ey2
-        ez_source => field%ez2
-    end if
-    
+
     !Update Ex
     iy=1
     do iz=2, params%nz-1

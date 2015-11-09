@@ -143,13 +143,37 @@ implicit none
             call write_result_cuda(params, field, field_cuda, 1, i, trim(params%output_path))
         !CPU mode
         else
-            call update_h_field(params, field, 1)
-            call update_d_field(params, field, 1)
-            call update_source(params, field, 1, runs_count)
-            call update_e_field(params, field, 1)
-            call update_mur_boundary(params, field, 1)
+            call update_h_field(params, field,                   &
+            					field%ex3, field%ey3, field%ez3, &
+					            1)
+					            
+            call update_d_field(params, field,                   &
+            					field%dx1, field%dy1, field%dz1, &
+					            field%dx3, field%dy3, field%dz3, &
+					            1)
+            
+            call update_source(params, field,        &
+                               field%dz1, field%dz3, &
+                               1, runs_count)
+            
+            call update_e_field(params, field,                   &
+                                field%ex1, field%ey1, field%ez1, &
+                                field%ex3, field%ey3, field%ez3, &
+                                field%ex2, field%ey2, field%ez2, &
+                                field%dx1, field%dy1, field%dz1, &
+                                field%dx3, field%dy3, field%dz3, &
+                                field%dx2, field%dy2, field%dz2, &
+                                1)
+            
+            call update_mur_boundary(params, field,                   &
+                                     field%ex1, field%ey1, field%ez1, &
+                                     field%ex3, field%ey3, field%ez3, &
+                                     1)
         
-            call write_result(params, field, 1, i, trim(params%output_path))
+            call write_result(params, field,                   &
+                              field%ex1, field%ey1, field%ez1, &
+                              field%dx1, field%dy1, field%dz1, &
+                              1, i, trim(params%output_path))
         end if
         
         !Second run
@@ -205,13 +229,37 @@ implicit none
             call write_result_cuda(params, field, field_cuda, 2, i+1, trim(params%output_path))
         !CPU mode
         else
-            call update_h_field(params, field, 2)
-            call update_d_field(params, field, 2)
-            call update_source(params, field, 2, runs_count)
-            call update_e_field(params, field, 2)
-            call update_mur_boundary(params, field, 2)
-        
-            call write_result(params, field, 2, i+1, trim(params%output_path))
+            call update_h_field(params, field,                   &
+            					field%ex1, field%ey1, field%ez1, &
+            					2)
+
+            call update_d_field(params, field,                   &
+                        		field%dx2, field%dy2, field%dz2, &
+					            field%dx1, field%dy1, field%dz1, &
+					            2)
+
+            call update_source(params, field,        &
+                               field%dz2, field%dz1, &
+                               2, runs_count)
+            
+            call update_e_field(params, field,                   &
+                                field%ex2, field%ey2, field%ez2, &
+                                field%ex1, field%ey1, field%ez1, &
+                                field%ex3, field%ey3, field%ez3, &
+                                field%dx2, field%dy2, field%dz2, &
+                                field%dx1, field%dy1, field%dz1, &
+                                field%dx3, field%dy3, field%dz3, &
+                                2)
+            
+            call update_mur_boundary(params, field,                   &
+                                     field%ex2, field%ey2, field%ez2, &
+                                     field%ex1, field%ey1, field%ez1, &
+                                     2)
+
+			call write_result(params, field,                   &
+                              field%ex2, field%ey2, field%ez2, &
+                              field%dx2, field%dy2, field%dz2, &
+                              2, i+1, trim(params%output_path))
         end if
         
         !Third run
@@ -267,13 +315,37 @@ implicit none
             call write_result_cuda(params, field, field_cuda, 3, i+2, trim(params%output_path))
         !CPU mode
         else
-            call update_h_field(params, field, 3)
-            call update_d_field(params, field, 3)
-            call update_source(params, field, 3, runs_count)
-            call update_e_field(params, field, 3)
-            call update_mur_boundary(params, field, 3)
+            call update_h_field(params, field,                   &
+            				    field%ex2, field%ey2, field%ez2, &
+            					3)
+
+            call update_d_field(params, field,                   &
+                                field%dx3, field%dy3, field%dz3, &
+					            field%dx2, field%dy2, field%dz2, &
+					            3)
+
+            call update_source(params, field,        &
+                               field%dz3, field%dz2, &
+                               3, runs_count)
+
+            call update_e_field(params, field,                   &
+                                field%ex3, field%ey3, field%ez3, &
+                                field%ex2, field%ey2, field%ez2, &
+                                field%ex1, field%ey1, field%ez1, &
+                                field%dx3, field%dy3, field%dz3, &
+                                field%dx2, field%dy2, field%dz2, &
+                                field%dx1, field%dy1, field%dz1, &
+                                3)
+
+            call update_mur_boundary(params, field,                   &
+                                     field%ex3, field%ey3, field%ez3, &
+                                     field%ex2, field%ey2, field%ez2, &
+                                     3)
         
-            call write_result(params, field, 3, i+2, trim(params%output_path))
+			call write_result(params, field,                   &
+                              field%ex3, field%ey3, field%ez3, &
+                              field%dx3, field%dy3, field%dz3, &
+                              3, i+2, trim(params%output_path))
         end if
     end do
 end program

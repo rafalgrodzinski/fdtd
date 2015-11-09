@@ -38,17 +38,17 @@ end type
 
 type fdtd_field
     !FDTD field
-    real, dimension(:,:,:), pointer :: ex1, ex2, ex3
-    real, dimension(:,:,:), pointer :: ey1, ey2, ey3 
-    real, dimension(:,:,:), pointer :: ez1, ez2, ez3 
+    real, dimension(:,:,:), allocatable :: ex1, ex2, ex3
+    real, dimension(:,:,:), allocatable :: ey1, ey2, ey3 
+    real, dimension(:,:,:), allocatable :: ez1, ez2, ez3 
 
     real, dimension(:,:,:), allocatable :: hx
     real, dimension(:,:,:), allocatable :: hy
     real, dimension(:,:,:), allocatable :: hz
 
-    real, dimension(:,:,:), pointer :: dx1, dx2, dx3 
-    real, dimension(:,:,:), pointer :: dy1, dy2, dy3 
-    real, dimension(:,:,:), pointer :: dz1, dz2, dz3 
+    real, dimension(:,:,:), allocatable :: dx1, dx2, dx3 
+    real, dimension(:,:,:), allocatable :: dy1, dy2, dy3 
+    real, dimension(:,:,:), allocatable :: dz1, dz2, dz3 
 
     real, dimension(:,:,:), allocatable :: eps_i, eps_s
     real, dimension(:,:,:), allocatable :: tau_d, sigma
@@ -543,13 +543,26 @@ subroutine print_parameters(params)
 end subroutine
 
 
-subroutine write_result(params, field, run_num, runs_count, output_path)
+subroutine write_result(params, field,                   &
+                        ex_source, ey_source, ez_source, &
+                        dx_source, dy_source, dz_source, &
+                        run_num, runs_count, output_path)
+
     !Input
-    type(fdtd_params), intent(in) :: params
-    type(fdtd_field), intent(in)  :: field
-    integer, intent(in)           :: run_num
-    integer, intent(in)           :: runs_count
-    character(len=*), intent(in)  :: output_path
+    type(fdtd_params), intent(in)      :: params
+    type(fdtd_field), intent(in)       :: field
+    
+	real, dimension(:,:,:), intent(in) :: ex_source
+    real, dimension(:,:,:), intent(in) :: ey_source
+    real, dimension(:,:,:), intent(in) :: ez_source
+    
+    real, dimension(:,:,:), intent(in) :: dx_source
+    real, dimension(:,:,:), intent(in) :: dy_source
+    real, dimension(:,:,:), intent(in) :: dz_source
+    
+    integer, intent(in)                :: run_num
+    integer, intent(in)                :: runs_count
+    character(len=*), intent(in)       :: output_path
     
     !Local vars
     integer, parameter :: file_unit = 100
@@ -557,42 +570,7 @@ subroutine write_result(params, field, run_num, runs_count, output_path)
     integer            :: error_code
     integer            :: i
     integer            :: ix, iy, iz, count
-    
-    real, dimension(:,:,:), pointer :: ex_source
-    real, dimension(:,:,:), pointer :: ey_source
-    real, dimension(:,:,:), pointer :: ez_source
-    
-    real, dimension(:,:,:), pointer :: dx_source
-    real, dimension(:,:,:), pointer :: dy_source
-    real, dimension(:,:,:), pointer :: dz_source
-    
-    !Setup based on run_num 1..3
-    if(run_num .eq. 1) then
-        ex_source => field%ex1
-        ey_source => field%ey1
-        ez_source => field%ez1
-        
-        dx_source => field%dx1
-        dy_source => field%dy1
-        dz_source => field%dz1
-    else if(run_num .eq. 2) then
-        ex_source => field%ex2
-        ey_source => field%ey2
-        ez_source => field%ez2
-        
-        dx_source => field%dx2
-        dy_source => field%dy2
-        dz_source => field%dz2
-    else
-        ex_source => field%ex3
-        ey_source => field%ey3
-        ez_source => field%ez3
-        
-        dx_source => field%dx3
-        dy_source => field%dy3
-        dz_source => field%dz3
-    end if
-    
+
     !Output x
     !Generte file name, starting with E_field_x_00001.out
     output_file_name = generate_file_name(output_path // "E_field_x_", ".out", runs_count)
