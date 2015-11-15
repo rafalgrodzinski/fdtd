@@ -212,7 +212,7 @@ subroutine write_result_cuda(params, field, field_cuda,       &
     field%rp_z_1 = field_cuda%rp_z_1
     field%rp_z_end = field_cuda%rp_z_end
 
-    call write_result(params, field,
+    call write_result(params, field,                   &
                       ex_source, ey_source, ez_source, &
                       dx_source, dy_source, dz_source, &
                       run_num, runs_count, output_path)
