@@ -154,11 +154,23 @@ subroutine init_fdtd_field_cuda(field_cuda, field)
 end subroutine
 
 
-subroutine write_result_cuda(params, field, field_cuda, run_num, runs_count, output_path)
+subroutine write_result_cuda(params, field, field_cuda,       &
+                             ex_source, ey_source, ez_source, &
+                             dx_source, dy_source, dz_source, &
+                             run_num, runs_count, output_path)
     !Input
     type(fdtd_params), intent(in)     :: params
     type(fdtd_field), intent(inout)   :: field
     type(fdtd_field_cuda), intent(in) :: field_cuda
+
+    real, dimension(:,:,:), intent(in) :: ex_source
+    real, dimension(:,:,:), intent(in) :: ey_source
+    real, dimension(:,:,:), intent(in) :: ez_source
+    
+    real, dimension(:,:,:), intent(in) :: dx_source
+    real, dimension(:,:,:), intent(in) :: dy_source
+    real, dimension(:,:,:), intent(in) :: dz_source
+
     integer, intent(in)               :: run_num
     integer, intent(in)               :: runs_count
     character(len=*), intent(in)      :: output_path
@@ -200,7 +212,10 @@ subroutine write_result_cuda(params, field, field_cuda, run_num, runs_count, out
     field%rp_z_1 = field_cuda%rp_z_1
     field%rp_z_end = field_cuda%rp_z_end
 
-    call write_result(params, field, run_num, runs_count, output_path)
+    call write_result(params, field,
+                      ex_source, ey_source, ez_source, &
+                      dx_source, dy_source, dz_source, &
+                      run_num, runs_count, output_path)
 end subroutine
 
 end module

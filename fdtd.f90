@@ -140,7 +140,10 @@ implicit none
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_cuda, 1, i, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda,                      &
+                                   field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                   field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                   1, i, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field,                   &
@@ -226,7 +229,10 @@ implicit none
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_cuda, 2, i+1, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda,                     &
+                                  field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                  field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                  2, i+1, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field,                   &
@@ -312,7 +318,10 @@ implicit none
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_cuda, 3, i+2, trim(params%output_path))
+            call write_result_cuda(params, field, field_cuda,                      &
+                                   field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                   field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                   3, i+2, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field,                   &
