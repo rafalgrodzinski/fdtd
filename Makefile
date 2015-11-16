@@ -15,5 +15,8 @@ run:
 runc:
 	pjsub run_cuda.sh
 
+prof:
+	pjsub run_nvprof.sh
+
 interact:
 	pjsub --interact -L rscunit=gwacsg

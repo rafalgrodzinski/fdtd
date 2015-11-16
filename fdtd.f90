@@ -140,9 +140,9 @@ implicit none
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_cuda,                      &
-                                   field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
-                                   field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+            call write_result_cuda(params, field, field_cuda,       &
+                                   field%ex1, field%ey1, field%ez1, &
+                                   field%dx1, field%dy1, field%dz1, &
                                    1, i, trim(params%output_path))
         !CPU mode
         else
@@ -229,9 +229,9 @@ implicit none
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_cuda,                     &
-                                  field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
-                                  field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+            call write_result_cuda(params, field, field_cuda,      &
+                                  field%ex2, field%ey2, field%ez2, &
+                                  field%dx2, field%dy2, field%dz2, &
                                   2, i+1, trim(params%output_path))
         !CPU mode
         else
@@ -318,9 +318,9 @@ implicit none
                                                                      params_cuda%mu_0, params_cuda%eps_0)
             cuda_stat = cudaDeviceSynchronize()
             
-            call write_result_cuda(params, field, field_cuda,                      &
-                                   field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
-                                   field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+            call write_result_cuda(params, field, field_cuda,       &
+                                   field%ex3, field%ey3, field%ez3, &
+                                   field%dx3, field%dy3, field%dz3, &
                                    3, i+2, trim(params%output_path))
         !CPU mode
         else
