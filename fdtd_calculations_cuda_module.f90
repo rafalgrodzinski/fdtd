@@ -4,6 +4,9 @@ use cudafor
 use fdtd_data_cuda_module
 
 
+integer, paramter :: BLOCK_SIZE = 8
+
+
 implicit none
 
 contains
@@ -22,44 +25,72 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
     real, intent(in)                      :: mu_0
 
     !Local vars 
+    real, shared :: s_ex_source(BLOCK_SIZE+1, BLOCK_SIZE+1, BLOCK_SIZE+1)
+    real, shared :: s_ey_source(BLOCK_SIZE+1, BLOCK_SIZE+1, BLOCK_SIZE+1)
+    real, shared :: s_ez_source(BLOCK_SIZE+1, BLOCK_SIZE+1, BLOCK_SIZE+1)
     integer :: ix, iy, iz
+    integer :: tix, tiy, tiz
     
     !Setup indexes
-    ix = threadIdx%x
-    iy = blockIdx%x
-    iz = blockIdx%y
+    tix = threadIdx%x
+    tiy = threadIdx%y
+    tiz = threadIdx%z
+    
+    ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
+    iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
+    iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
+    
+    !Preload data
+    s_ex_source(tix, tiy, tiz) = ex_source(ix, iy, iz)
+    s_ey_source(tix, tiy, tiz) = ey_source(ix, iy, iz)
+    s_ez_source(tix, tiy, tiz) = ez_source(ix, iy, iz)
+    
+    if(tix == BLOCK_SIZE .and. ix < nx) then
+        s_ex_source(tix+1, tiy, tiz) = ex_source(ix+1, iy, iz)
+    end if
+    
+    if(tiy == BLOCK_SIZE .and. iy < ny) then
+        s_ex_source(tix, tiy+1, tiz) = ex_source(ix, iy+1, iz)
+    end if
+    
+    if(tiz == BLOCK_SIZE .and. iz < nz) then
+        s_ex_source(tix, tiy, tiz+1) = ex_source(ix, iy, iz+1)
+    end if
+    
+    !Wait for loads to finish
+    call syncthreads()
     
     !Update Hx
     if(ix >= 2 .and. ix <= nx-1 .and. &
        iy >= 1 .and. iy <= ny-1 .and. &
-       iz >= 1 .and. iz<=nz-1) then
-        hx(ix, iy, iz) = hx(ix, iy, iz) -                                          &
-                               dt/(mu_0 * dy) *                                    &
-                               (ez_source(ix, iy+1, iz) - ez_source(ix, iy, iz)) + &
-                               dt/(mu_0 * dz) *                                    &
-                               (ey_source(ix, iy, iz+1) - ey_source(ix, iy, iz))
+       iz >= 1 .and. iz <= nz-1) then
+        hx(ix, iy, iz) = hx(ix, iy, iz) -                                              &
+                         dt/(mu_0 * dy) *                                              &
+                         (s_ez_source(tix, tiy+1, tiz) - s_ez_source(tix, tiy, tiz)) + &
+                         dt/(mu_0 * dz) *                                              &
+                         (s_ey_source(tix, tiy, tiz+1) - s_ey_source(tix, tiy, tiz))
     end if
     
     !Update Hy
     if(ix >= 1 .and. ix <= nx-1 .and. &
        iy >= 2 .and. iy <= ny-1 .and. &
-       iz >= 1 .and. iz<=nz-1) then
-        hy(ix, iy, iz) = hy(ix, iy, iz) -                                          &
-                               dt/(mu_0 * dz) *                                    &
-                               (ex_source(ix, iy, iz+1) - ex_source(ix, iy, iz)) + &
-                               dt/(mu_0 * dx) *                                    &
-                               (ez_source(ix+1, iy, iz) - ez_source(ix, iy, iz))
+       iz >= 1 .and. iz <= nz-1) then
+        hy(ix, iy, iz) = hy(ix, iy, iz) -                                              &
+                         dt/(mu_0 * dz) *                                              &
+                         (s_ex_source(tix, tiy, tiz+1) - s_ex_source(tix, tiy, tiz)) + &
+                         dt/(mu_0 * dx) *                                              &
+                         (s_ez_source(tix+1, tiy, tiz) - s_ez_source(tix, tiy, tiz))
     end if
     
     !Update Hz
     if(ix >= 1 .and. ix <= nx-1 .and. &
        iy >= 1 .and. iy <= ny-1 .and. &
-       iz >= 2 .and. iz<=nz-1) then
-        hz(ix, iy, iz) = hz(ix, iy, iz) -                                          &
-                               dt/(mu_0 * dx) *                                    &
-                               (ey_source(ix+1, iy, iz) - ey_source(ix, iy, iz)) + &
-                               dt/(mu_0 * dy) *                                    &
-                               (ex_source(ix, iy+1, iz) - ex_source(ix, iy, iz))
+       iz >= 2 .and. iz <= nz-1) then
+        hz(ix, iy, iz) = hz(ix, iy, iz) -                                              &
+                         dt/(mu_0 * dx) *                                              &
+                         (s_ey_source(tix+1, tiy, tiz) - s_ey_source(tix, tiy, tiz)) + &
+                         dt/(mu_0 * dy) *                                              &
+                         (s_ex_source(tix, tiy+1, tiz) - s_ex_source(tix, tiy, tiz))
     end if
 end subroutine
 
@@ -81,9 +112,9 @@ attributes(global) subroutine update_d_field_cuda(dx_target, dy_target, dz_targe
     integer :: ix, iy, iz
     
     !Setup indexes
-    ix = threadIdx%x
-    iy = blockIdx%x
-    iz = blockIdx%y
+    ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
+    iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
+    iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
 
     !Update Dx
     if(ix >= 1 .and. ix <= nx-1 .and. &
@@ -141,9 +172,9 @@ attributes(global) subroutine update_e_field_cuda(ex_target, ey_target, ez_targe
     integer :: ix, iy, iz
 
     !Setup indexes
-    ix = threadIdx%x
-    iy = blockIdx%x
-    iz = blockIdx%y
+    ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
+    iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
+    iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
 
     !Update Ex
     if(ix >= 1 .and. ix <= nx-1 .and. &
@@ -266,9 +297,9 @@ attributes(global) subroutine update_source_cuda(dz_target, dz_source, &
     integer :: x, y, z
     
     !Setup indexes
-    ix = threadIdx%x
-    iy = blockIdx%x
-    iz = blockIdx%y
+    ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
+    iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
+    iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
 
     !Update source
     if(ix == 1 .and. iy == 1 .and. iz == 1) then
@@ -309,9 +340,9 @@ attributes(global) subroutine update_mur_boundary_cuda(ex_target, ey_target, ez_
     integer :: ix, iy, iz
 
     !Setup indexes
-    ix = threadIdx%x
-    iy = blockIdx%x
-    iz = blockIdx%y
+    ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
+    iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
+    iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
 
     !Update Ex
     if(ix >= 1 .and. ix <= nx-1 .and. &
