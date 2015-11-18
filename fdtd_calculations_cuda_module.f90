@@ -22,42 +22,75 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
     real, dimension(:,:,:), intent(in)    :: ex_source, ey_source, ez_source
 
     !Local vars 
-    real, shared :: s_ex_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
-    real, shared :: s_ey_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
-    real, shared :: s_ez_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
+    !real, shared :: s_ex_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
+    !real, shared :: s_ey_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
+    !real, shared :: s_ez_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
     integer :: ix, iy, iz
-    integer :: tix, tiy, tiz
+    !integer :: tix, tiy, tiz
     
     !Setup indexes
-    tix = threadIdx%x
-    tiy = threadIdx%y
-    tiz = threadIdx%z
+    !tix = threadIdx%x
+    !tiy = threadIdx%y
+    !tiz = threadIdx%z
    
     ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
     iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
     iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
     
     !Preload data
-    if(ix <= g_nx .and. iy <= g_ny .and. iz <= g_nz) then
-        s_ex_source(tix, tiy, tiz) = ex_source(ix, iy, iz)
-        s_ey_source(tix, tiy, tiz) = ey_source(ix, iy, iz)
-        s_ez_source(tix, tiy, tiz) = ez_source(ix, iy, iz)
-    end if
-
-    if(tix == TILE_SIZE .and. ix < g_nx) then
-        s_ex_source(tix+1, tiy, tiz) = ex_source(ix+1, iy, iz)
-    end if
-    
-    if(tiy == TILE_SIZE .and. iy < g_ny) then
-        s_ey_source(tix, tiy+1, tiz) = ey_source(ix, iy+1, iz)
-    end if
-    
-    if(tiz == TILE_SIZE .and. iz < g_nz) then
-        s_ez_source(tix, tiy, tiz+1) = ez_source(ix, iy, iz+1)
-    end if
-    
-    !Wait for loads to finish
-    call syncthreads()
+    !if(ix <= g_nx .and. iy <= g_ny .and. iz <= g_nz) then
+    !    s_ex_source(tix, tiy, tiz) = ex_source(ix, iy, iz)
+    !    s_ey_source(tix, tiy, tiz) = ey_source(ix, iy, iz)
+    !    s_ez_source(tix, tiy, tiz) = ez_source(ix, iy, iz)
+    !end if
+!
+    !if(tix == TILE_SIZE .and. ix < g_nx) then
+    !    s_ex_source(tix+1, tiy, tiz) = ex_source(ix+1, iy, iz)
+    !end if
+    !
+    !if(tiy == TILE_SIZE .and. iy < g_ny) then
+    !    s_ey_source(tix, tiy+1, tiz) = ey_source(ix, iy+1, iz)
+    !end if
+    !
+    !if(tiz == TILE_SIZE .and. iz < g_nz) then
+    !    s_ez_source(tix, tiy, tiz+1) = ez_source(ix, iy, iz+1)
+    !end if
+    !
+    !!Wait for loads to finish
+    !call syncthreads()
+    !
+    !!Update Hx
+    !if(ix >= 2 .and. ix <= g_nx-1 .and. &
+    !   iy >= 1 .and. iy <= g_ny-1 .and. &
+    !   iz >= 1 .and. iz <= g_nz-1) then
+    !    hx(ix, iy, iz) = hx(ix, iy, iz) -                                              &
+    !                     g_dt/(g_mu_0 * g_dy) *                                              &
+    !                     (s_ez_source(tix, tiy+1, tiz) - s_ez_source(tix, tiy, tiz)) + &
+    !                     g_dt/(g_mu_0 * g_dz) *                                              &
+    !                     (s_ey_source(tix, tiy, tiz+1) - s_ey_source(tix, tiy, tiz))
+    !end if
+    !
+    !!Update Hy
+    !if(ix >= 1 .and. ix <= g_nx-1 .and. &
+    !   iy >= 2 .and. iy <= g_ny-1 .and. &
+    !   iz >= 1 .and. iz <= g_nz-1) then
+    !    hy(ix, iy, iz) = hy(ix, iy, iz) -                                              &
+    !                     g_dt/(g_mu_0 * g_dz) *                                              &
+    !                     (s_ex_source(tix, tiy, tiz+1) - s_ex_source(tix, tiy, tiz)) + &
+    !                     g_dt/(g_mu_0 * g_dx) *                                              &
+    !                     (s_ez_source(tix+1, tiy, tiz) - s_ez_source(tix, tiy, tiz))
+    !end if
+    !
+    !!Update Hz
+    !if(ix >= 1 .and. ix <= g_nx-1 .and. &
+    !   iy >= 1 .and. iy <= g_ny-1 .and. &
+    !   iz >= 2 .and. iz <= g_nz-1) then
+    !    hz(ix, iy, iz) = hz(ix, iy, iz) -                                              &
+    !                     g_dt/(g_mu_0 * g_dx) *                                              &
+    !                     (s_ey_source(tix+1, tiy, tiz) - s_ey_source(tix, tiy, tiz)) + &
+    !                     g_dt/(g_mu_0 * g_dy) *                                              &
+    !                     (s_ex_source(tix, tiy+1, tiz) - s_ex_source(tix, tiy, tiz))
+    !end if
     
     !Update Hx
     if(ix >= 2 .and. ix <= g_nx-1 .and. &
@@ -65,9 +98,9 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
        iz >= 1 .and. iz <= g_nz-1) then
         hx(ix, iy, iz) = hx(ix, iy, iz) -                                              &
                          g_dt/(g_mu_0 * g_dy) *                                              &
-                         (s_ez_source(tix, tiy+1, tiz) - s_ez_source(tix, tiy, tiz)) + &
+                         (ez_source(ix, iy+1, iz) - ez_source(ix, iy, iz)) + &
                          g_dt/(g_mu_0 * g_dz) *                                              &
-                         (s_ey_source(tix, tiy, tiz+1) - s_ey_source(tix, tiy, tiz))
+                         (ey_source(ix, iy, iz+1) - ey_source(ix, iy, iz))
     end if
     
     !Update Hy
@@ -76,9 +109,9 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
        iz >= 1 .and. iz <= g_nz-1) then
         hy(ix, iy, iz) = hy(ix, iy, iz) -                                              &
                          g_dt/(g_mu_0 * g_dz) *                                              &
-                         (s_ex_source(tix, tiy, tiz+1) - s_ex_source(tix, tiy, tiz)) + &
+                         (ex_source(ix, iy, iz+1) - ex_source(ix, iy, iz)) + &
                          g_dt/(g_mu_0 * g_dx) *                                              &
-                         (s_ez_source(tix+1, tiy, tiz) - s_ez_source(tix, tiy, tiz))
+                         (ez_source(ix+1, iy, iz) - ez_source(ix, iy, iz))
     end if
     
     !Update Hz
@@ -87,9 +120,9 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
        iz >= 2 .and. iz <= g_nz-1) then
         hz(ix, iy, iz) = hz(ix, iy, iz) -                                              &
                          g_dt/(g_mu_0 * g_dx) *                                              &
-                         (s_ey_source(tix+1, tiy, tiz) - s_ey_source(tix, tiy, tiz)) + &
+                         (ey_source(ix+1, iy, iz) - ey_source(ix, iy, iz)) + &
                          g_dt/(g_mu_0 * g_dy) *                                              &
-                         (s_ex_source(tix, tiy+1, tiz) - s_ex_source(tix, tiy, tiz))
+                         (ex_source(ix, iy+1, iz) - ex_source(ix, iy, iz))
     end if
 end subroutine
 
