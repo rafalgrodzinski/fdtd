@@ -3,11 +3,9 @@ module fdtd_calculations_cuda_module
 use cudafor
 use fdtd_data_cuda_module
 
-
-integer, paramter :: BLOCK_SIZE = 8
-
-
 implicit none
+
+integer, parameter :: TILE_SIZE = 4
 
 contains
 
@@ -25,9 +23,9 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
     real, intent(in)                      :: mu_0
 
     !Local vars 
-    real, shared :: s_ex_source(BLOCK_SIZE+1, BLOCK_SIZE+1, BLOCK_SIZE+1)
-    real, shared :: s_ey_source(BLOCK_SIZE+1, BLOCK_SIZE+1, BLOCK_SIZE+1)
-    real, shared :: s_ez_source(BLOCK_SIZE+1, BLOCK_SIZE+1, BLOCK_SIZE+1)
+    real, shared :: s_ex_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
+    real, shared :: s_ey_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
+    real, shared :: s_ez_source(TILE_SIZE+1, TILE_SIZE+1, TILE_SIZE+1)
     integer :: ix, iy, iz
     integer :: tix, tiy, tiz
     
@@ -35,26 +33,28 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
     tix = threadIdx%x
     tiy = threadIdx%y
     tiz = threadIdx%z
-    
+   
     ix = threadIdx%x + (blockIdx%x - 1) * blockDim%x
     iy = threadIdx%y + (blockIdx%y - 1) * blockDim%y
     iz = threadIdx%z + (blockIdx%z - 1) * blockDim%z
     
     !Preload data
-    s_ex_source(tix, tiy, tiz) = ex_source(ix, iy, iz)
-    s_ey_source(tix, tiy, tiz) = ey_source(ix, iy, iz)
-    s_ez_source(tix, tiy, tiz) = ez_source(ix, iy, iz)
-    
-    if(tix == BLOCK_SIZE .and. ix < nx) then
+    if(ix <= nx .and. iy <= ny .and. iz <= nz) then
+        s_ex_source(tix, tiy, tiz) = ex_source(ix, iy, iz)
+        s_ey_source(tix, tiy, tiz) = ey_source(ix, iy, iz)
+        s_ez_source(tix, tiy, tiz) = ez_source(ix, iy, iz)
+    end if
+
+    if(tix == TILE_SIZE .and. ix < nx) then
         s_ex_source(tix+1, tiy, tiz) = ex_source(ix+1, iy, iz)
     end if
     
-    if(tiy == BLOCK_SIZE .and. iy < ny) then
-        s_ex_source(tix, tiy+1, tiz) = ex_source(ix, iy+1, iz)
+    if(tiy == TILE_SIZE .and. iy < ny) then
+        s_ey_source(tix, tiy+1, tiz) = ey_source(ix, iy+1, iz)
     end if
     
-    if(tiz == BLOCK_SIZE .and. iz < nz) then
-        s_ex_source(tix, tiy, tiz+1) = ex_source(ix, iy, iz+1)
+    if(tiz == TILE_SIZE .and. iz < nz) then
+        s_ez_source(tix, tiy, tiz+1) = ez_source(ix, iy, iz+1)
     end if
     
     !Wait for loads to finish

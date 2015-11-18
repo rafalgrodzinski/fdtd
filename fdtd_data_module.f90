@@ -38,25 +38,25 @@ end type
 
 type fdtd_field
     !FDTD field
-    real, pinned,  dimension(:,:,:), allocatable :: ex1, ex2, ex3
-    real, pinned,  dimension(:,:,:), allocatable :: ey1, ey2, ey3 
-    real, pinned,  dimension(:,:,:), allocatable :: ez1, ez2, ez3 
+    real, dimension(:,:,:), allocatable :: ex1, ex2, ex3
+    real, dimension(:,:,:), allocatable :: ey1, ey2, ey3 
+    real, dimension(:,:,:), allocatable :: ez1, ez2, ez3 
 
-    real, pinned,  dimension(:,:,:), allocatable :: hx
-    real, pinned,  dimension(:,:,:), allocatable :: hy
-    real, pinned,  dimension(:,:,:), allocatable :: hz
+    real, dimension(:,:,:), allocatable :: hx
+    real, dimension(:,:,:), allocatable :: hy
+    real, dimension(:,:,:), allocatable :: hz
 
-    real, pinned,  dimension(:,:,:), allocatable :: dx1, dx2, dx3 
-    real, pinned,  dimension(:,:,:), allocatable :: dy1, dy2, dy3 
-    real, pinned,  dimension(:,:,:), allocatable :: dz1, dz2, dz3 
+    real, dimension(:,:,:), allocatable :: dx1, dx2, dx3 
+    real, dimension(:,:,:), allocatable :: dy1, dy2, dy3 
+    real, dimension(:,:,:), allocatable :: dz1, dz2, dz3 
 
-    real, pinned,  dimension(:,:,:), allocatable :: eps_i, eps_s
-    real, pinned,  dimension(:,:,:), allocatable :: tau_d, sigma
+    real, dimension(:,:,:), allocatable :: eps_i, eps_s
+    real, dimension(:,:,:), allocatable :: tau_d, sigma
 
-    !Mur bpinned, oundary
-    real, pinned,  dimension(:,:,:), allocatable :: rp_x_1, rp_x_end
-    real, pinned,  dimension(:,:,:), allocatable :: rp_y_1, rp_y_end
-    real, pinned,  dimension(:,:,:), allocatable :: rp_z_1, rp_z_end
+    !Mur boundary
+    real, dimension(:,:,:), allocatable :: rp_x_1, rp_x_end
+    real, dimension(:,:,:), allocatable :: rp_y_1, rp_y_end
+    real, dimension(:,:,:), allocatable :: rp_z_1, rp_z_end
 end type
 
 

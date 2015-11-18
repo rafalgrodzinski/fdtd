@@ -8,4 +8,5 @@
 #PJM -j
 #PJM -L elapse=1:00:00
 
-time /gwfefs/opt/x86_64/cuda/7.5/bin/nvprof ./fdtd -cuda
+/gwfefs/opt/x86_64/cuda/7.5/bin/nvprof ./fdtd -cuda
+#/gwfefs/opt/x86_64/cuda/7.5/bin/nvprof --metrics gld_transactions,gst_transactions ./fdtd -cuda
