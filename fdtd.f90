@@ -142,7 +142,7 @@ implicit none
                                                                      field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
                                                                      field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
                                                                      field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
-                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end
+                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end)
             
             call write_result_cuda(params, field, field_cuda,       &
                                    field%ex1, field%ey1, field%ez1, &
@@ -190,8 +190,7 @@ implicit none
         !CUDA mode
         if(is_cuda) then
             call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
-                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
-                                                                params_cuda%nx, params_cuda%ny, params_cuda%nz)
+                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1)
             cuda_stat = cudaDeviceSynchronize()
             
             call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &

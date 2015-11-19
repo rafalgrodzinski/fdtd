@@ -322,7 +322,7 @@ attributes(global) subroutine update_source_cuda(dz_target, dz_source, &
 
     !Update source
     if(ix == 1 .and. iy == 1 .and. iz == 1) then
-        do i=1, g_nsrc_0
+        do i=1, g_nsrc
             x = src(i, 1)
             y = src(i, 2)
             z = src(i, 3)
