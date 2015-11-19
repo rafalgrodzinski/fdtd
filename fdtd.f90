@@ -34,6 +34,10 @@ implicit none
     type(fdtd_params_cuda), allocatable :: params_cuda
     type(fdtd_field_cuda), allocatable  :: field_cuda
     integer :: cuda_stat
+    
+    !CUDA streams data
+    integer :: h_stream, d_stream, e_stream
+    integer :: h_event, d_event, e_event
 
     is_cuda = .false.
 
@@ -80,6 +84,15 @@ implicit none
         grid_size = dim3((params%nx + TILE_SIZE - 1)/TILE_SIZE, &
                          (params%nx + TILE_SIZE - 1)/TILE_SIZE, &
                          (params%nx + TILE_SIZE - 1)/TILE_SIZE)
+                         
+        !Stream data
+        cudaStreamCreate(h_stream)
+        cudaStreamCreate(d_stream)
+        cudaStreamCreate(e_stream)
+        
+        cudaEventCreate(h_event)
+        cudaEventCreate(d_event)
+        cudaEventCreate(e_event)
     end if
 
     if(is_cuda) then
@@ -113,41 +126,67 @@ implicit none
         
         !CUDA mode
         if(is_cuda) then
-            call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
-                                                                field_cuda%ex3, field_cuda%ey3, field_cuda%ez3)
-            cuda_stat = cudaDeviceSynchronize()
+            !H stream
+            call update_h_field_cuda<<<grid_size, block_size, 0, h_stream>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
+                                                                             field_cuda%ex3, field_cuda%ey3, field_cuda%ez3)
 
-            call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
-                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
-                                                                field_cuda%hx, field_cuda%hy, field_cuda%hz)
-            cuda_stat = cudaDeviceSynchronize()
- 
-            call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz1, field_cuda%dz3,                                 &
-                                                               field_cuda%hx, field_cuda%hy,                                   &
-                                                               params_cuda%src, params_cuda%jz,                                &
-                                                               runs_count)
-            cuda_stat = cudaDeviceSynchronize()
+            cudaEventRecord(h_event, h_stream)
+
+            cudaMemcpyAsync(field%hx, field_cuda%hx, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            cudaMemcpyAsync(field%hy, field_cuda%hy, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            cudaMemcpyAsync(field%hz, field_cuda%hz, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+
+            !D stream
+            cudaStreamWaitEvent(d_stream, h_event)
+
+            call update_d_field_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                             field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                             field_cuda%hx, field_cuda%hy, field_cuda%hz)
+
+            call update_source_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dz1, field_cuda%dz3,                                 &
+                                                                            field_cuda%hx, field_cuda%hy,                                   &
+                                                                            params_cuda%src, params_cuda%jz,                                &
+                                                                            runs_count)
+
+            cudaEventRecord(d_event, d_stream)
+
+            cudaMemcpyAsync(field%dx1, field_cuda%dx1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            cudaMemcpyAsync(field%dy1, field_cuda%dy1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            cudaMemcpyAsync(field%dz1, field_cuda%dz1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
             
-            call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
-                                                                field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
-                                                                field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
-                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
-                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
-                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
-                                                                field_cuda%eps_i, field_cuda%eps_s,             &
-                                                                field_cuda%tau_d, field_cuda%sigma)
-            cuda_stat = cudaDeviceSynchronize()
+            !E stream
+            cudaStreamWaitEvent(e_stream, d_event)
+
+            call update_e_field_cuda<<<grid_size, block_size, 0, e_stream>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                                                             field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                                                             field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                                                             field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                             field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                             field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                             field_cuda%eps_i, field_cuda%eps_s,             &
+                                                                             field_cuda%tau_d, field_cuda%sigma)
             
-            call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
-                                                                     field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
-                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
-                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
-                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end)
+            call update_mur_boundary_cuda<<<grid_size, block_size, 0, e_stream>>>(field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
+                                                                                  field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
+                                                                                  field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                                  field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                                  field_cuda%rp_z_1, field_cuda%rp_z_end)
+                                                                                  
+            cudaEventRecord(e_event, e_stream)
             
-            call write_result_cuda(params, field, field_cuda,       &
-                                   field%ex1, field%ey1, field%ez1, &
-                                   field%dx1, field%dy1, field%dz1, &
-                                   1, i, trim(params%output_path))
+            cudaMemcpyAsync(field%ex1, field_cuda%ex1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            cudaMemcpyAsync(field%ey1, field_cuda%ey1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            cudaMemcpyAsync(field%ez1, field_cuda%ez1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            
+            !Write results
+            cudaStreamSynchronize(h_stream)
+            cudaStreamSynchronize(d_stream)
+            cudaStreamSynchronize(e_stream)
+            
+            call write_result(params, field,                   &
+                              field%ex1, field%ey1, field%ez1, &
+                              field%dx1, field%dy1, field%dz1, &
+                              1, i, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field,                   &
@@ -189,42 +228,63 @@ implicit none
         
         !CUDA mode
         if(is_cuda) then
-            call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
-                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1)
-            cuda_stat = cudaDeviceSynchronize()
-            
-            call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
-                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
-                                                                field_cuda%hx, field_cuda%hy, field_cuda%hz)
-            cuda_stat = cudaDeviceSynchronize()
-            
-            call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz2, field_cuda%dz1,                                 &
-                                                               field_cuda%hx, field_cuda%hy,                                   &
-                                                               params_cuda%src, params_cuda%jz,                                &
-                                                               runs_count)
-            cuda_stat = cudaDeviceSynchronize()
+            !H stream
+            call update_h_field_cuda<<<grid_size, block_size, 0, h_stream>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
+                                                                             field_cuda%ex1, field_cuda%ey1, field_cuda%ez1)
 
-            call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
-                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
-                                                                field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
-                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
-                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
-                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
-                                                                field_cuda%eps_i, field_cuda%eps_s,             &
-                                                                field_cuda%tau_d, field_cuda%sigma)
-            cuda_stat = cudaDeviceSynchronize()
+            cudaEventRecord(h_event, h_stream)
 
-            call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2,                 &
-                                                                     field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
-                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
-                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
-                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end)
-            cuda_stat = cudaDeviceSynchronize()
+            cudaMemcpyAsync(field%hx, field_cuda%hx, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            cudaMemcpyAsync(field%hy, field_cuda%hy, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            cudaMemcpyAsync(field%hz, field_cuda%hz, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
             
-            call write_result_cuda(params, field, field_cuda,      &
-                                  field%ex2, field%ey2, field%ez2, &
-                                  field%dx2, field%dy2, field%dz2, &
-                                  2, i+1, trim(params%output_path))
+            !D stream
+            cudaStreamWaitEvent(d_stream, h_event)
+
+            call update_d_field_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                             field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                             field_cuda%hx, field_cuda%hy, field_cuda%hz)
+
+            call update_source_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dz2, field_cuda%dz1,                                 &
+                                                                            field_cuda%hx, field_cuda%hy,                                   &
+                                                                            params_cuda%src, params_cuda%jz,                                &
+                                                                            runs_count)
+
+            cudaEventRecord(d_event, d_stream)
+
+            cudaMemcpyAsync(field%dx2, field_cuda%dx2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            cudaMemcpyAsync(field%dy2, field_cuda%dy2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            cudaMemcpyAsync(field%dz2, field_cuda%dz2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+
+            !E stream
+            cudaStreamWaitEvent(e_stream, d_event)
+
+            call update_e_field_cuda<<<grid_size, block_size, 0, e_stream>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                                                             field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                                                             field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                                                             field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                             field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                             field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                             field_cuda%eps_i, field_cuda%eps_s,             &
+                                                                             field_cuda%tau_d, field_cuda%sigma)
+
+            call update_mur_boundary_cuda<<<grid_size, block_size, 0, e_stream>>>(field_cuda%ex2, field_cuda%ey2, field_cuda%ez2,                 &
+                                                                                  field_cuda%ex1, field_cuda%ey1, field_cuda%ez1,                 &
+                                                                                  field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                                  field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                                  field_cuda%rp_z_1, field_cuda%rp_z_end)
+
+            cudaEventRecord(e_event, e_stream)
+            
+            cudaMemcpyAsync(field%ex2, field_cuda%ex2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            cudaMemcpyAsync(field%ey2, field_cuda%ey2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            cudaMemcpyAsync(field%ez2, field_cuda%ez2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            
+            !Write results
+			call write_result(params, field,                   &
+                              field%ex2, field%ey2, field%ez2, &
+                              field%dx2, field%dy2, field%dz2, &
+                              2, i+1, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field,                   &
@@ -266,42 +326,67 @@ implicit none
         
         !CUDA mode
         if(is_cuda) then
-            call update_h_field_cuda<<<grid_size, block_size>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
-                                                                field_cuda%ex2, field_cuda%ey2, field_cuda%ez2)
-            cuda_stat = cudaDeviceSynchronize()
-           
-            call update_d_field_cuda<<<grid_size, block_size>>>(field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
-                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
-                                                                field_cuda%hx, field_cuda%hy, field_cuda%hz)
-            cuda_stat = cudaDeviceSynchronize()
-            
-            call update_source_cuda<<<grid_size, block_size>>>(field_cuda%dz3, field_cuda%dz2,                                 &
-                                                               field_cuda%hx, field_cuda%hy,                                   &
-                                                               params_cuda%src, params_cuda%jz,                                &
-                                                               runs_count)
-            cuda_stat = cudaDeviceSynchronize()
+            !H stream
+            call update_h_field_cuda<<<grid_size, block_size, 0, h_stream>>>(field_cuda%hx, field_cuda%hy, field_cuda%hz,                    &
+                                                                             field_cuda%ex2, field_cuda%ey2, field_cuda%ez2)
 
-            call update_e_field_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
-                                                                field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
-                                                                field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
-                                                                field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
-                                                                field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
-                                                                field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
-                                                                field_cuda%eps_i, field_cuda%eps_s,             &
-                                                                field_cuda%tau_d, field_cuda%sigma)
-            cuda_stat = cudaDeviceSynchronize()
+            cudaEventRecord(h_event, h_stream)
 
-            call update_mur_boundary_cuda<<<grid_size, block_size>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
-                                                                     field_cuda%ex2, field_cuda%ey2, field_cuda%ez1,                 &
-                                                                     field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
-                                                                     field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
-                                                                     field_cuda%rp_z_1, field_cuda%rp_z_end)
-            cuda_stat = cudaDeviceSynchronize()
+            cudaMemcpyAsync(field%hx, field_cuda%hx, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            cudaMemcpyAsync(field%hy, field_cuda%hy, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            cudaMemcpyAsync(field%hz, field_cuda%hz, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+
+            !D stream
+            cudaStreamWaitEvent(d_stream, h_event)
+
+            call update_d_field_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                             field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                             field_cuda%hx, field_cuda%hy, field_cuda%hz)
             
-            call write_result_cuda(params, field, field_cuda,       &
-                                   field%ex3, field%ey3, field%ez3, &
-                                   field%dx3, field%dy3, field%dz3, &
-                                   3, i+2, trim(params%output_path))
+            call update_source_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dz3, field_cuda%dz2,                                 &
+                                                                            field_cuda%hx, field_cuda%hy,                                   &
+                                                                            params_cuda%src, params_cuda%jz,                                &
+                                                                            runs_count)
+
+            cudaEventRecord(d_event, d_stream)
+
+            cudaMemcpyAsync(field%dx3, field_cuda%dx3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            cudaMemcpyAsync(field%dy3, field_cuda%dy3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            cudaMemcpyAsync(field%dz3, field_cuda%dz3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+
+            !E stream
+            cudaStreamWaitEvent(e_stream, d_event)
+
+            call update_e_field_cuda<<<grid_size, block_size, 0, e_stream>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3, &
+                                                                             field_cuda%ex2, field_cuda%ey2, field_cuda%ez2, &
+                                                                             field_cuda%ex1, field_cuda%ey1, field_cuda%ez1, &
+                                                                             field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
+                                                                             field_cuda%dx2, field_cuda%dy2, field_cuda%dz2, &
+                                                                             field_cuda%dx1, field_cuda%dy1, field_cuda%dz1, &
+                                                                             field_cuda%eps_i, field_cuda%eps_s,             &
+                                                                             field_cuda%tau_d, field_cuda%sigma)
+
+            call update_mur_boundary_cuda<<<grid_size, block_size, 0, e_stream>>>(field_cuda%ex3, field_cuda%ey3, field_cuda%ez3,                 &
+                                                                                  field_cuda%ex2, field_cuda%ey2, field_cuda%ez1,                 &
+                                                                                  field_cuda%rp_x_1, field_cuda%rp_x_end,                         &
+                                                                                  field_cuda%rp_y_1, field_cuda%rp_y_end,                         &
+                                                                                  field_cuda%rp_z_1, field_cuda%rp_z_end)
+
+            cudaEventRecord(e_event, e_stream)
+            
+            cudaMemcpyAsync(field%ex3, field_cuda%ex3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            cudaMemcpyAsync(field%ey3, field_cuda%ey3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            cudaMemcpyAsync(field%ez3, field_cuda%ez3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+            
+            !Write results
+            cudaStreamSynchronize(h_stream)
+            cudaStreamSynchronize(d_stream)
+            cudaStreamSynchronize(e_stream)
+
+			call write_result(params, field,                   &
+                              field%ex3, field%ey3, field%ez3, &
+                              field%dx3, field%dy3, field%dz3, &
+                              3, i+2, trim(params%output_path))
         !CPU mode
         else
             call update_h_field(params, field,                   &
