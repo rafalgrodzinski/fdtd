@@ -180,9 +180,10 @@ implicit none
             err = cudaMemcpyAsync(field%ez1, field_cuda%ez1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
            
             !Write results
-            err = cudaStreamSynchronize(h_stream)
-            err = cudaStreamSynchronize(d_stream)
-            err = cudaStreamSynchronize(e_stream)
+            !err = cudaStreamSynchronize(h_stream)
+            !err = cudaStreamSynchronize(d_stream)
+            !err = cudaStreamSynchronize(e_stream)
+            err = cudaDeviceSynchronize()
             
             call write_result(params, field,                   &
                               field%ex1, field%ey1, field%ez1, &
@@ -280,6 +281,8 @@ implicit none
             err = cudaMemcpyAsync(field%ex2, field_cuda%ex2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
             err = cudaMemcpyAsync(field%ey2, field_cuda%ey2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
             err = cudaMemcpyAsync(field%ez2, field_cuda%ez2, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
+
+            err = cudaDeviceSynchronize()
             
             !Write results
 			call write_result(params, field,                   &
@@ -380,9 +383,11 @@ implicit none
             err = cudaMemcpyAsync(field%ez3, field_cuda%ez3, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
             
             !Write results
-            err = cudaStreamSynchronize(h_stream)
-            err = cudaStreamSynchronize(d_stream)
-            err = cudaStreamSynchronize(e_stream)
+            !err = cudaStreamSynchronize(h_stream)
+            !err = cudaStreamSynchronize(d_stream)
+            !err = cudaStreamSynchronize(e_stream)
+            
+            err = cudaDeviceSynchronize()
 
 			call write_result(params, field,                   &
                               field%ex3, field%ey3, field%ez3, &
