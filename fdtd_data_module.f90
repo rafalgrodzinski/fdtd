@@ -38,17 +38,15 @@ end type
 
 type fdtd_field
     !FDTD field
-    real, dimension(:,:,:), allocatable :: ex1, ex2, ex3
-    real, dimension(:,:,:), allocatable :: ey1, ey2, ey3 
-    real, dimension(:,:,:), allocatable :: ez1, ez2, ez3 
+    real, pinned, dimension(:,:,:), allocatable :: ex1, ex2, ex3
+    real, pinned, dimension(:,:,:), allocatable :: ey1, ey2, ey3 
+    real, pinned, dimension(:,:,:), allocatable :: ez1, ez2, ez3 
 
-    real, dimension(:,:,:), allocatable :: hx
-    real, dimension(:,:,:), allocatable :: hy
-    real, dimension(:,:,:), allocatable :: hz
+    real, pinned, dimension(:,:,:), allocatable :: hx, hy, hz
 
-    real, dimension(:,:,:), allocatable :: dx1, dx2, dx3 
-    real, dimension(:,:,:), allocatable :: dy1, dy2, dy3 
-    real, dimension(:,:,:), allocatable :: dz1, dz2, dz3 
+    real, pinned, dimension(:,:,:), allocatable :: dx1, dx2, dx3 
+    real, pinned, dimension(:,:,:), allocatable :: dy1, dy2, dy3 
+    real, pinned, dimension(:,:,:), allocatable :: dz1, dz2, dz3 
 
     real, dimension(:,:,:), allocatable :: eps_i, eps_s
     real, dimension(:,:,:), allocatable :: tau_d, sigma
