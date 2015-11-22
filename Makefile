@@ -1,5 +1,5 @@
 CC=pgfortran
-CFLAGS=-Mcuda -Minfo
+CFLAGS=-Mcuda=kepler -Minfo
 OUTPUT=fdtd
 SOURCES=fdtd.f90
 
