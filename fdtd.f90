@@ -89,7 +89,7 @@ implicit none
         !Stream data
         err = cudaStreamCreate(h_stream)
         err = cudaStreamCreate(d_stream)
-        err = cudaStreamCreate(e_stream)
+        !err = cudaStreamCreate(e_stream)
 
         !err = cudaEventCreate(h_event)
         !err = cudaEventCreate(d_event)
