@@ -141,10 +141,10 @@ implicit none
                                                                              field_cuda%dx3, field_cuda%dy3, field_cuda%dz3, &
                                                                              field_cuda%hx, field_cuda%hy, field_cuda%hz)
 
-            call update_source_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dz1, field_cuda%dz3,                                 &
-                                                                            field_cuda%hx, field_cuda%hy,                                   &
-                                                                            params_cuda%src, params_cuda%jz,                                &
-                                                                            runs_count)
+            !call update_source_cuda<<<grid_size, block_size, 0, d_stream>>>(field_cuda%dz1, field_cuda%dz3,                                 &
+            !                                                                field_cuda%hx, field_cuda%hy,                                   &
+            !                                                                params_cuda%src, params_cuda%jz,                                &
+            !                                                                runs_count)
 
             !err = cudaEventRecord(d_event, d_stream)
 
@@ -172,11 +172,11 @@ implicit none
             err = cudaMemcpyAsync(field%hx, field_cuda%hx, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
             err = cudaMemcpyAsync(field%dx1, field_cuda%dx1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
                         
-            err = cudaMemcpyAsync(field%hy, field_cuda%hy, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
-            err = cudaMemcpyAsync(field%dy1, field_cuda%dy1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
-                    
-            err = cudaMemcpyAsync(field%hz, field_cuda%hz, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
-            err = cudaMemcpyAsync(field%dz1, field_cuda%dz1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            !err = cudaMemcpyAsync(field%hy, field_cuda%hy, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            !err = cudaMemcpyAsync(field%dy1, field_cuda%dy1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
+            !        
+            !err = cudaMemcpyAsync(field%hz, field_cuda%hz, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, h_stream)
+            !err = cudaMemcpyAsync(field%dz1, field_cuda%dz1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, d_stream)
             
             !err = cudaMemcpyAsync(field%ex1, field_cuda%ex1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
             !err = cudaMemcpyAsync(field%ey1, field_cuda%ey1, params%nx*params%ny*params%nz, cudaMemcpyDeviceToHost, e_stream)
