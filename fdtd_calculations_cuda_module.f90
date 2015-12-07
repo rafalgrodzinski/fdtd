@@ -3,11 +3,11 @@ module fdtd_calculations_cuda_module
 use cudafor
 use fdtd_data_cuda_module
 
-
-integer, paramter :: BLOCK_SIZE = 4
-
-
 implicit none
+
+
+integer, parameter :: TILE_SIZE = 4
+
 
 contains
 
@@ -36,33 +36,33 @@ attributes(global) subroutine update_h_field_cuda(hx, hy, hz,                   
     if(ix >= 2 .and. ix <= nx-1 .and. &
        iy >= 1 .and. iy <= ny-1 .and. &
        iz >= 1 .and. iz <= nz-1) then
-        hx(ix, iy, iz) = hx(ix, iy, iz) -                                          &
-                         dt/(mu_0 * dy) *                                          &
-                         (ez_source(tix, tiy+1, tiz) - ez_source(tix, tiy, tiz)) + &
-                         dt/(mu_0 * dz) *                                          &
-                         (ey_source(tix, tiy, tiz+1) - ey_source(tix, tiy, tiz))
+        hx(ix, iy, iz) = hx(ix, iy, iz) -                                    &
+                         dt/(mu_0 * dy) *                                    &
+                         (ez_source(ix, iy+1, iz) - ez_source(ix, iy, iz)) + &
+                         dt/(mu_0 * dz) *                                    &
+                         (ey_source(ix, iy, iz+1) - ey_source(ix, iy, iz))
     end if
     
     !Update Hy
     if(ix >= 1 .and. ix <= nx-1 .and. &
        iy >= 2 .and. iy <= ny-1 .and. &
        iz >= 1 .and. iz <= nz-1) then
-        hy(ix, iy, iz) = hy(ix, iy, iz) -                                          &
-                         dt/(mu_0 * dz) *                                          &
-                         (ex_source(tix, tiy, tiz+1) - ex_source(tix, tiy, tiz)) + &
-                         dt/(mu_0 * dx) *                                          &
-                         (ez_source(tix+1, tiy, tiz) - ez_source(tix, tiy, tiz))
+        hy(ix, iy, iz) = hy(ix, iy, iz) -                                    &
+                         dt/(mu_0 * dz) *                                    &
+                         (ex_source(ix, iy, iz+1) - ex_source(ix, iy, iz)) + &
+                         dt/(mu_0 * dx) *                                    &
+                         (ez_source(ix+1, iy, iz) - ez_source(ix, iy, iz))
     end if
     
     !Update Hz
     if(ix >= 1 .and. ix <= nx-1 .and. &
        iy >= 1 .and. iy <= ny-1 .and. &
        iz >= 2 .and. iz <= nz-1) then
-        hz(ix, iy, iz) = hz(ix, iy, iz) -                                          &
-                         dt/(mu_0 * dx) *                                          &
-                         (ey_source(tix+1, tiy, tiz) - ey_source(tix, tiy, tiz)) + &
-                         dt/(mu_0 * dy) *                                          &
-                         (ex_source(tix, tiy+1, tiz) - ex_source(tix, tiy, tiz))
+        hz(ix, iy, iz) = hz(ix, iy, iz) -                                    &
+                         dt/(mu_0 * dx) *                                    &
+                         (ey_source(ix+1, iy, iz) - ey_source(ix, iy, iz)) + &
+                         dt/(mu_0 * dy) *                                    &
+                         (ex_source(ix, iy+1, iz) - ex_source(ix, iy, iz))
     end if
 end subroutine
 

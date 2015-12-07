@@ -76,16 +76,16 @@ implicit none
         call init_fdtd_field_cuda(field_cuda, field)
         print *, ""
         
-        block_size = dim3(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-        grid_size = dim3((params%nx + BLOCK_SIZE - 1)/BLOCK_SIZE,
-                         (params%nx + BLOCK_SIZE - 1)/BLOCK_SIZE,
-                         (params%nx + BLOCK_SIZE - 1)/BLOCK_SIZE)
+        block_size = dim3(TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        grid_size = dim3((params%nx + TILE_SIZE - 1)/TILE_SIZE, &
+                         (params%ny + TILE_SIZE - 1)/TILE_SIZE, &
+                         (params%nz + TILE_SIZE - 1)/TILE_SIZE)
     end if
 
     if(is_cuda) then
         print *, "Computation using GPU"
-        print "A, 3I4", "Block size (x, y, z):", block_size%x, block_size%y, block_size%z
-        print "A, 3I6", "Grid size (x, y, z):", grid_size%x, grid_size%y, grid_size%z
+        print "(A, 3I4)", "Block size (x, y, z):", block_size%x, block_size%y, block_size%z
+        print "(A, 3I6)", "Grid size (x, y, z):", grid_size%x, grid_size%y, grid_size%z
     else
         print *, "Computation using CPU"
     end if
