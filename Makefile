@@ -1,22 +1,19 @@
-CC=pgfortran
-CFLAGS=-Mcuda -Minfo
+CC=nvcc
+CFLAGS=
 OUTPUT=fdtd
-SOURCES=fdtd.f90
+SOURCES=fdtd.cu utils.o
 
-all:
+fdtd: utils.o
 	${CC} -o ${OUTPUT} ${CFLAGS} ${SOURCES}
+
+utils.o:
+	${CC} ${CFLAGS} -c utils.c
     
 clean:
-	rm ${OUTPUT} *.mod *.o *.s run*.sh.o* run*.sh.e* 2> /dev/null
+	rm ${OUTPUT} *.mod *.o *.s run*.sh.o* run*.sh.e* output/* 2> /dev/null
 
-run:
+run: fdtd
 	pjsub run.sh
 
-runc:
-	pjsub run_cuda.sh
-
-prof:
+prof: fdtd
 	pjsub run_nvprof.sh
-
-interact:
-	pjsub --interact -L rscunit=gwacsg

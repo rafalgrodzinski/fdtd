@@ -5,4 +5,4 @@
 #PJM -L vnode-core=6
 #PJM -x gpu_per_vnode=1
 
-./fdtd -cuda
+./fdtd
