@@ -40,6 +40,8 @@ int main(int argc, char **argv)
     }
 
     // Clean up
+    deallocDeviceField(deviceField);
+    deallocHostField(hostField);
     deallocParams(params);
 }
 
@@ -153,26 +155,173 @@ void printParams(FdtdParams *params)
     printf("Default eps_s:              %g\n", params->eps_s);
     printf("Default eps_i:              %g\n", params->eps_i);
     printf("Default tau_d:              %g\n", params->tau_d);
+    printf("\n");
 }
 
 
 FdtdField  *initHostFieldWithParams(FdtdParams *params)
 {
-    return NULL;
+    int n = params->nx * params->ny * params->nz * sizeof(float); 
+
+    FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
+
+    CHECK(cudaHostAlloc(&field->ex1, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey1, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez1, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->ex2, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey2, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez2, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->ex3, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey3, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez3, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->hx, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->hy, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->hz, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->dx1, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy1, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz1, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->dx2, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy2, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz2, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->dx3, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy3, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz3, n, cudaHostAllocDefault))
+
+    return field;
 }
 
 
 void deallocHostField(FdtdField *field)
 {
+    CHECK(cudaFree(field->ex1))
+    CHECK(cudaFree(field->ey1))
+    CHECK(cudaFree(field->ez1))
+
+    CHECK(cudaFree(field->ex2))
+    CHECK(cudaFree(field->ey2))
+    CHECK(cudaFree(field->ez2))
+
+    CHECK(cudaFree(field->ex3))
+    CHECK(cudaFree(field->ey3))
+    CHECK(cudaFree(field->ez3))
+
+    CHECK(cudaFree(field->hx))
+    CHECK(cudaFree(field->hy))
+    CHECK(cudaFree(field->hz))
+
+    CHECK(cudaFree(field->dx1))
+    CHECK(cudaFree(field->dy1))
+    CHECK(cudaFree(field->dz1))
+
+    CHECK(cudaFree(field->dx2))
+    CHECK(cudaFree(field->dy2))
+    CHECK(cudaFree(field->dz2))
+
+    CHECK(cudaFree(field->dx3))
+    CHECK(cudaFree(field->dy3))
+    CHECK(cudaFree(field->dz3))
+
+    free(field);
 }
 
 
-FdtdField  *initDeviceFieldWithParams(FdtdParams *params)
+FdtdField *initDeviceFieldWithParams(FdtdParams *params)
 {
-    return NULL;
+    int n = params->nx * params->ny * params->nz * sizeof(float); 
+
+    FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
+
+    CHECK(cudaMalloc(&field->ex1, n))
+    CHECK(cudaMalloc(&field->ey1, n))
+    CHECK(cudaMalloc(&field->ez1, n))
+
+    CHECK(cudaMalloc(&field->ex2, n))
+    CHECK(cudaMalloc(&field->ey2, n))
+    CHECK(cudaMalloc(&field->ez2, n))
+
+    CHECK(cudaMalloc(&field->ex3, n))
+    CHECK(cudaMalloc(&field->ey3, n))
+    CHECK(cudaMalloc(&field->ez3, n))
+
+    CHECK(cudaMalloc(&field->hx, n))
+    CHECK(cudaMalloc(&field->hy, n))
+    CHECK(cudaMalloc(&field->hz, n))
+
+    CHECK(cudaMalloc(&field->dx1, n))
+    CHECK(cudaMalloc(&field->dy1, n))
+    CHECK(cudaMalloc(&field->dz1, n))
+
+    CHECK(cudaMalloc(&field->dx2, n))
+    CHECK(cudaMalloc(&field->dy2, n))
+    CHECK(cudaMalloc(&field->dz2, n))
+
+    CHECK(cudaMalloc(&field->dx3, n))
+    CHECK(cudaMalloc(&field->dy3, n))
+    CHECK(cudaMalloc(&field->dz3, n))
+
+    CHECK(cudaMalloc(&field->eps_i, n))
+    CHECK(cudaMalloc(&field->eps_s, n))
+    CHECK(cudaMalloc(&field->tau_d, n))
+    CHECK(cudaMalloc(&field->sigma, n))
+
+    CHECK(cudaMalloc(&field->rp_x_0, n))
+    CHECK(cudaMalloc(&field->rp_y_0, n))
+    CHECK(cudaMalloc(&field->rp_z_0, n))
+
+    CHECK(cudaMalloc(&field->rp_x_end, n))
+    CHECK(cudaMalloc(&field->rp_y_end, n))
+    CHECK(cudaMalloc(&field->rp_z_end, n))
+
+    return field;
 }
 
 
 void deallocDeviceField(FdtdField *field)
 {
+    CHECK(cudaFree(field->ex1))
+    CHECK(cudaFree(field->ey1))
+    CHECK(cudaFree(field->ez1))
+
+    CHECK(cudaFree(field->ex2))
+    CHECK(cudaFree(field->ey2))
+    CHECK(cudaFree(field->ez2))
+
+    CHECK(cudaFree(field->ex3))
+    CHECK(cudaFree(field->ey3))
+    CHECK(cudaFree(field->ez3))
+
+    CHECK(cudaFree(field->hx))
+    CHECK(cudaFree(field->hy))
+    CHECK(cudaFree(field->hz))
+
+    CHECK(cudaFree(field->dx1))
+    CHECK(cudaFree(field->dy1))
+    CHECK(cudaFree(field->dz1))
+
+    CHECK(cudaFree(field->dx2))
+    CHECK(cudaFree(field->dy2))
+    CHECK(cudaFree(field->dz2))
+
+    CHECK(cudaFree(field->dx3))
+    CHECK(cudaFree(field->dy3))
+    CHECK(cudaFree(field->dz3))
+
+    CHECK(cudaFree(field->eps_i))
+    CHECK(cudaFree(field->eps_s))
+    CHECK(cudaFree(field->tau_d))
+    CHECK(cudaFree(field->sigma))
+
+    CHECK(cudaFree(field->rp_x_0))
+    CHECK(cudaFree(field->rp_y_0))
+    CHECK(cudaFree(field->rp_z_0))
+
+    CHECK(cudaFree(field->rp_x_end))
+    CHECK(cudaFree(field->rp_y_end))
+    CHECK(cudaFree(field->rp_z_end))
 }
