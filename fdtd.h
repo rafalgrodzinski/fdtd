@@ -44,13 +44,13 @@ FdtdParams *initParamsWithPath(const char *);
 void deallocParams(FdtdParams *);
 void printParams(FdtdParams *params);
 
-FdtdField  *initHostFieldWithParams(FdtdParams *);
-void deallocHostField(FdtdField *);
+FdtdField *initFieldWithParams(FdtdParams *);
+void deallocField(FdtdField *);
 
-FdtdField  *initDeviceFieldWithParams(FdtdParams *);
+FdtdField *initDeviceFieldWithParams(FdtdParams *);
 void deallocDeviceField(FdtdField *);
 
-void loadDeviceMaterials(FdtdParams *params, FdtdField *deviceField, const char *specsFilePath, const char *materialsPath);
-void setupDeviceMurBoundary(FdtdParams *params, FdtdField *deviceField);
+void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
+void setupMurBoundary(FdtdParams *params, FdtdField *field);
 
 #endif

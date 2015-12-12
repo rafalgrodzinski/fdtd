@@ -22,16 +22,16 @@ int main(int argc, char **argv)
     printParams(params);
 
     // Initialize field
-    FdtdField  *hostField, *deviceField; // Used for CUDA
+    FdtdField  *field, *deviceField; // Used for CUDA
 
     printf("Initializing field...\n");
-    hostField = initHostFieldWithParams(params);
+    field = initFieldWithParams(params);
     deviceField = initDeviceFieldWithParams(params);
 
     printf("Reading materials data...\n");
-    loadDeviceMaterials(params, deviceField, "data/mat_specs_riken", params->inputPath);
+    loadMaterials(params, field, "data/mat_specs_riken", params->inputPath);
     printf("Setting up mur boundary...\n");
-    setupDeviceMurBoundary(params, deviceField);
+    setupMurBoundary(params, field);
 
     // Setup CUDA parameters
     dim3 gridSize = dim3((params->nx + BLOCK_X - 1)/BLOCK_X,
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 
     // Clean up
     deallocDeviceField(deviceField);
-    deallocHostField(hostField);
+    deallocField(field);
     deallocParams(params);
 }
 
@@ -166,12 +166,13 @@ void printParams(FdtdParams *params)
 }
 
 
-FdtdField  *initHostFieldWithParams(FdtdParams *params)
+FdtdField *initFieldWithParams(FdtdParams *params)
 {
     int n = params->nx * params->ny * params->nz * sizeof(float); 
 
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
 
+    // e
     CHECK(cudaHostAlloc(&field->ex1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->ey1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->ez1, n, cudaHostAllocDefault))
@@ -184,10 +185,12 @@ FdtdField  *initHostFieldWithParams(FdtdParams *params)
     CHECK(cudaHostAlloc(&field->ey3, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->ez3, n, cudaHostAllocDefault))
 
+    // h
     CHECK(cudaHostAlloc(&field->hx, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->hy, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->hz, n, cudaHostAllocDefault))
 
+    // d
     CHECK(cudaHostAlloc(&field->dx1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dy1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dz1, n, cudaHostAllocDefault))
@@ -200,12 +203,28 @@ FdtdField  *initHostFieldWithParams(FdtdParams *params)
     CHECK(cudaHostAlloc(&field->dy3, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dz3, n, cudaHostAllocDefault))
 
+    // sigma, eps, tau
+    CHECK(cudaHostAlloc(&field->sigma, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->eps_s, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->eps_i, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->tau_d, n, cudaHostAllocDefault))
+
+    // rp
+    CHECK(cudaHostAlloc(&field->rp_x_0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rp_y_0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rp_z_0, n, cudaHostAllocDefault))
+
+    CHECK(cudaHostAlloc(&field->rp_x_end, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rp_y_end, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rp_z_end, n, cudaHostAllocDefault))
+
     return field;
 }
 
 
-void deallocHostField(FdtdField *field)
+void deallocField(FdtdField *field)
 {
+    // e
     CHECK(cudaFree(field->ex1))
     CHECK(cudaFree(field->ey1))
     CHECK(cudaFree(field->ez1))
@@ -218,10 +237,12 @@ void deallocHostField(FdtdField *field)
     CHECK(cudaFree(field->ey3))
     CHECK(cudaFree(field->ez3))
 
+    // h
     CHECK(cudaFree(field->hx))
     CHECK(cudaFree(field->hy))
     CHECK(cudaFree(field->hz))
 
+    // d
     CHECK(cudaFree(field->dx1))
     CHECK(cudaFree(field->dy1))
     CHECK(cudaFree(field->dz1))
@@ -234,6 +255,21 @@ void deallocHostField(FdtdField *field)
     CHECK(cudaFree(field->dy3))
     CHECK(cudaFree(field->dz3))
 
+    // sigma, eps, tau
+    CHECK(cudaFree(&field->sigma))
+    CHECK(cudaFree(&field->eps_s))
+    CHECK(cudaFree(&field->eps_i))
+    CHECK(cudaFree(&field->tau_d))
+
+    // rp
+    CHECK(cudaFree(&field->rp_x_0))
+    CHECK(cudaFree(&field->rp_y_0))
+    CHECK(cudaFree(&field->rp_z_0))
+
+    CHECK(cudaFree(&field->rp_x_end))
+    CHECK(cudaFree(&field->rp_y_end))
+    CHECK(cudaFree(&field->rp_z_end))
+
     free(field);
 }
 
@@ -244,6 +280,7 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
 
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
 
+    // e
     CHECK(cudaMalloc(&field->ex1, n))
     CHECK(cudaMalloc(&field->ey1, n))
     CHECK(cudaMalloc(&field->ez1, n))
@@ -256,10 +293,12 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     CHECK(cudaMalloc(&field->ey3, n))
     CHECK(cudaMalloc(&field->ez3, n))
 
+    // h
     CHECK(cudaMalloc(&field->hx, n))
     CHECK(cudaMalloc(&field->hy, n))
     CHECK(cudaMalloc(&field->hz, n))
 
+    // d
     CHECK(cudaMalloc(&field->dx1, n))
     CHECK(cudaMalloc(&field->dy1, n))
     CHECK(cudaMalloc(&field->dz1, n))
@@ -272,11 +311,13 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     CHECK(cudaMalloc(&field->dy3, n))
     CHECK(cudaMalloc(&field->dz3, n))
 
+    // sigma, eps, tau
     CHECK(cudaMalloc(&field->eps_i, n))
     CHECK(cudaMalloc(&field->eps_s, n))
     CHECK(cudaMalloc(&field->tau_d, n))
     CHECK(cudaMalloc(&field->sigma, n))
 
+    // rp
     CHECK(cudaMalloc(&field->rp_x_0, n))
     CHECK(cudaMalloc(&field->rp_y_0, n))
     CHECK(cudaMalloc(&field->rp_z_0, n))
@@ -291,6 +332,7 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
 
 void deallocDeviceField(FdtdField *field)
 {
+    // e
     CHECK(cudaFree(field->ex1))
     CHECK(cudaFree(field->ey1))
     CHECK(cudaFree(field->ez1))
@@ -303,10 +345,12 @@ void deallocDeviceField(FdtdField *field)
     CHECK(cudaFree(field->ey3))
     CHECK(cudaFree(field->ez3))
 
+    // h
     CHECK(cudaFree(field->hx))
     CHECK(cudaFree(field->hy))
     CHECK(cudaFree(field->hz))
 
+    // d
     CHECK(cudaFree(field->dx1))
     CHECK(cudaFree(field->dy1))
     CHECK(cudaFree(field->dz1))
@@ -319,11 +363,13 @@ void deallocDeviceField(FdtdField *field)
     CHECK(cudaFree(field->dy3))
     CHECK(cudaFree(field->dz3))
 
+    // sigma, eps, tau
     CHECK(cudaFree(field->eps_i))
     CHECK(cudaFree(field->eps_s))
     CHECK(cudaFree(field->tau_d))
     CHECK(cudaFree(field->sigma))
 
+    // rp
     CHECK(cudaFree(field->rp_x_0))
     CHECK(cudaFree(field->rp_y_0))
     CHECK(cudaFree(field->rp_z_0))
@@ -334,7 +380,7 @@ void deallocDeviceField(FdtdField *field)
 }
 
 
-void loadDeviceMaterials(FdtdParams *params, FdtdField *deviceField, const char *specsFilePath, const char *materialsPath)
+void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath)
 {
     // Load material specs
     int specsCount = 94;
@@ -357,13 +403,6 @@ void loadDeviceMaterials(FdtdParams *params, FdtdField *deviceField, const char 
     fclose(specsFile);
 
     // Load materials
-    int n = params->nx * params->ny * params->nz * sizeof(float);
-
-    float *sigma = (float *)malloc(n);
-    float *eps_s = (float *)malloc(n);
-    float *eps_i = (float *)malloc(n);
-    float *tau_d = (float *)malloc(n);
-
     for(int iz=0; iz<params->nz; iz++) {
         char materialFileName[1024];
         sprintf(materialFileName, "%s/v1_%5d.pgm", materialsPath, iz);
@@ -380,32 +419,70 @@ void loadDeviceMaterials(FdtdParams *params, FdtdField *deviceField, const char 
                 fscanf(materialFile, "%d", &code);
 
                 int offset = iz*params->nx*params->ny + iy*params->nx + ix;
-                sigma[offset] = specs[code*4 + 0];
-                eps_s[offset] = specs[code*4 + 1];
-                eps_i[offset] = specs[code*4 + 2];
-                tau_d[offset] = specs[code*4 + 3];
+                field->sigma[offset] = specs[code*4 + 0];
+                field->eps_s[offset] = specs[code*4 + 1];
+                field->eps_i[offset] = specs[code*4 + 2];
+                field->tau_d[offset] = specs[code*4 + 3];
             }
         }
 
         fclose(materialFile);
     }
 
-    // Copy material to GPU
-    CHECK(cudaMemcpy(deviceField->sigma, sigma, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->eps_s, eps_s, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->eps_i, eps_i, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->tau_d, tau_d, n, cudaMemcpyHostToDevice))
-
-
-    free(tau_d);
-    free(eps_i);
-    free(eps_s);
-    free(sigma);
-
     free(specs);
 }
 
 
-void setupDeviceMurBoundary(FdtdParams *params, FdtdField *deviceField)
+void setupMurBoundary(FdtdParams *params, FdtdField *field)
 {
+    // Setup rp_x
+    for(int iz = 0; iz < params->nz; iz++) {
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix = 0; ix < 2; ix++) {
+                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+
+                field->rp_x_0[offset] = 0.0; 
+            }
+
+            for(int ix = params->nx - 2; ix < params->nx; ix++) {
+                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+
+                field->rp_x_end[offset] = 0.0;
+            }
+        }
+    }
+
+    // Setup rp_y
+    for(int iz = 0; iz < params->nz; iz++) {
+        for(int ix = 0; ix < params->nx; ix++) {
+            for(int iy = 0; iy < 2; iy++) {
+                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+
+                field->rp_y_0[offset] = 0.0; 
+            }
+
+            for(int iy = params->ny - 2; iy < params->ny; iy++) {
+                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+
+                field->rp_y_end[offset] = 0.0;
+            }
+        }
+    }
+
+    // Setup rp_z
+    for(int iy = 0; iy < params->ny; iy++) {
+        for(int ix = 0; ix < params->nx; ix++) {
+            for(int iz = 0; iz < 2; iz++) {
+                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+
+                field->rp_z_0[offset] = 0.0; 
+            }
+
+            for(int iz = params->nz - 2; iz < params->nz; iz++) {
+                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+
+                field->rp_z_end[offset] = 0.0;
+            }
+        }
+    }
 }
