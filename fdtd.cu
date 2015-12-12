@@ -17,14 +17,21 @@ int main(int argc, char **argv)
 {
     // Read params
     FdtdParams *params;
+    printf("Reading parameters...\n");
     params = initParamsWithPath("data/input_params");
     printParams(params);
 
     // Initialize field
     FdtdField  *hostField, *deviceField; // Used for CUDA
 
+    printf("Initializing field...\n");
     hostField = initHostFieldWithParams(params);
     deviceField = initDeviceFieldWithParams(params);
+
+    printf("Reading materials data...\n");
+    loadDeviceMaterials(params, deviceField, "data/mat_specs_riken", params->inputPath);
+    printf("Setting up mur boundary...\n");
+    setupDeviceMurBoundary(params, deviceField);
 
     // Setup CUDA parameters
     dim3 gridSize = dim3((params->nx + BLOCK_X - 1)/BLOCK_X,
@@ -35,19 +42,19 @@ int main(int argc, char **argv)
     // Main loop
     for(int i=0; i<params->iterationsCount; i++) {
         // Run 0
+        printf("Running iteration %d", i);
+
         // Run 1
+        printf("Running iteration %d", i+1);
+
         // Run 2
+        printf("Running iteration %d", i+2);
     }
 
     // Clean up
     deallocDeviceField(deviceField);
     deallocHostField(hostField);
     deallocParams(params);
-}
-
-
-void printUsage()
-{
 }
 
 
@@ -324,4 +331,81 @@ void deallocDeviceField(FdtdField *field)
     CHECK(cudaFree(field->rp_x_end))
     CHECK(cudaFree(field->rp_y_end))
     CHECK(cudaFree(field->rp_z_end))
+}
+
+
+void loadDeviceMaterials(FdtdParams *params, FdtdField *deviceField, const char *specsFilePath, const char *materialsPath)
+{
+    // Load material specs
+    int specsCount = 94;
+    float *specs = (float *)calloc(specsCount * 4, sizeof(float));
+    char temp[1024];
+    int index;
+    float sigma_value, eps_s_value, eps_i_value, tau_d_value;
+
+    FILE *specsFile = fopen(specsFilePath, "r");
+    //check(specsFile != NULL, "Cannot open specs file");
+
+    for(int i=0; i<94; i++) {
+        fscanf(specsFile, "%d %s %g %g %g %g", &index, temp, &sigma_value, &eps_s_value, &eps_i_value, &tau_d_value);
+        specs[index*4 + 0] = sigma_value;
+        specs[index*4 + 1] = eps_s_value;
+        specs[index*4 + 2] = eps_i_value;
+        specs[index*4 + 3] = tau_d_value;
+    }
+
+    fclose(specsFile);
+
+    // Load materials
+    int n = params->nx * params->ny * params->nz * sizeof(float);
+
+    float *sigma = (float *)malloc(n);
+    float *eps_s = (float *)malloc(n);
+    float *eps_i = (float *)malloc(n);
+    float *tau_d = (float *)malloc(n);
+
+    for(int iz=0; iz<params->nz; iz++) {
+        char materialFileName[1024];
+        sprintf(materialFileName, "%s/v1_%5d.pgm", materialsPath, iz);
+        FILE *materialFile = fopen(materialFileName, "r");
+
+        printf("Reading %s...", materialFileName);
+
+        int width, height;
+        fscanf(materialFile, "%s %s %s %d %d %s", temp, temp, temp, &width, &height, temp);
+
+        for(int iy=0; iy<params->ny; iy++) {
+            for(int ix=0; ix<params->nx; ix++) {
+                int code;
+                fscanf(materialFile, "%d", &code);
+
+                int offset = iz*params->nx*params->ny + iy*params->nx + ix;
+                sigma[offset] = specs[code*4 + 0];
+                eps_s[offset] = specs[code*4 + 1];
+                eps_i[offset] = specs[code*4 + 2];
+                tau_d[offset] = specs[code*4 + 3];
+            }
+        }
+
+        fclose(materialFile);
+    }
+
+    // Copy material to GPU
+    CHECK(cudaMemcpy(deviceField->sigma, sigma, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->eps_s, eps_s, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->eps_i, eps_i, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->tau_d, tau_d, n, cudaMemcpyHostToDevice))
+
+
+    free(tau_d);
+    free(eps_i);
+    free(eps_s);
+    free(sigma);
+
+    free(specs);
+}
+
+
+void setupDeviceMurBoundary(FdtdParams *params, FdtdField *deviceField)
+{
 }

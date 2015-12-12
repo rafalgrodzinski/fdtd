@@ -40,9 +40,9 @@ typedef struct
 } FdtdField;
 
 
-void printUsage();
 FdtdParams *initParamsWithPath(const char *);
 void deallocParams(FdtdParams *);
+void printParams(FdtdParams *params);
 
 FdtdField  *initHostFieldWithParams(FdtdParams *);
 void deallocHostField(FdtdField *);
@@ -50,6 +50,7 @@ void deallocHostField(FdtdField *);
 FdtdField  *initDeviceFieldWithParams(FdtdParams *);
 void deallocDeviceField(FdtdField *);
 
-void printParams(FdtdParams *params);
+void loadDeviceMaterials(FdtdParams *params, FdtdField *deviceField, const char *specsFilePath, const char *materialsPath);
+void setupDeviceMurBoundary(FdtdParams *params, FdtdField *deviceField);
 
 #endif
