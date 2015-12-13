@@ -3,6 +3,7 @@
 
 #include <cuda_runtime_api.h>
 
+
 __global__ void updateHField(float *hx,       float *hy,       float *hz,
                              float *exSource, float *eySource, float *ezSource,
                              int nx, int ny, int nz,

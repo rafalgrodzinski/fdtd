@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     dim3 blockSize = dim3(BLOCK_X, BLOCK_Y, BLOCK_Z);
 
     // Main loop
-    for(int i=0; i<params->iterationsCount; i++) {
+    for(int i=0; i<params->iterationsCount; i += 3) {
         // Run 0
         printf("Running iteration %d", i);
 
@@ -87,6 +87,12 @@ int main(int argc, char **argv)
                                                    params->dt, params->dx, params->dy, params->dz, 
                                                    params->mu0, params->eps0);
         CHECK(cudaDeviceSynchronize());
+
+        // Write results
+        writeResults(params, field,
+                     field->ex0, field->ey0, field->ez0,
+                     field->dx0, field->dy0, field->dz0,
+                     i, params->outputPath);
 
         // Run 1
         printf("Running iteration %d", i+1);
@@ -133,6 +139,12 @@ int main(int argc, char **argv)
                                                    params->mu0, params->eps0);
         CHECK(cudaDeviceSynchronize())
 
+        // Write results
+        writeResults(params, field,
+                     field->ex1, field->ey1, field->ez1,
+                     field->dx1, field->dy1, field->dz1,
+                     i+1, params->outputPath);
+
         // Run 2
         printf("Running iteration %d", i+2);
 
@@ -177,6 +189,12 @@ int main(int argc, char **argv)
                                                    params->dt, params->dx, params->dy, params->dz, 
                                                    params->mu0, params->eps0);
         CHECK(cudaDeviceSynchronize())
+
+        // Write results
+        writeResults(params, field,
+                     field->ex2, field->ey2, field->ez2,
+                     field->dx2, field->dy2, field->dz2,
+                     i+2, params->outputPath);
     }
 
     // Clean up
@@ -618,4 +636,66 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
 
 void setupSources(FdtdParams *params, FdtdField *field)
 {
+}
+
+
+void writeResults(FdtdParams *params, FdtdField *field,
+                  float *exSource, float *eySource, float *ezSource,
+                  float *dxSource, float *dySource, float *dzSource,
+                  int currentIteration, char *outputPath)
+{
+    char outputFilePath[1024];
+    FILE *outputFile;
+
+    // Used by OFFSET macro
+    int nx = params->nx;
+    int ny = params->ny;
+
+    // Output x
+    sprintf(outputPath, "%s/E_field_x_%5d.out", outputPath, currentIteration);
+
+    outputFile = fopen(outputFilePath, "w");
+    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
+        int iy = params->sources[isrc * 3 + 1];
+        int iz = params->sources[isrc * 3 + 2];
+        for(int ix=0; ix < params->nx; ix++) {
+            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g", ix, iy, iz,
+                    OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
+        }
+    }
+    fclose(outputFile);
+
+    // Output y
+    sprintf(outputPath, "%s/E_field_y_%5d.out", outputPath, currentIteration);
+
+    outputFile = fopen(outputFilePath, "w");
+    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
+        int ix = params->sources[isrc * 3 + 0];
+        int iz = params->sources[isrc * 3 + 2];
+        for(int iy=0; iy < params->ny; iy++) {
+            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g", ix, iy, iz,
+                    OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
+        }
+    }
+    fclose(outputFile);
+
+    // Output z
+    sprintf(outputPath, "%s/E_field_z_%5d.out", outputPath, currentIteration);
+
+    outputFile = fopen(outputFilePath, "w");
+    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
+        int ix = params->sources[isrc * 3 + 0];
+        int iy = params->sources[isrc * 3 + 1];
+        for(int iz=0; iz < params->nz; iz++) {
+            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g", ix, iy, iz,
+                    OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
+        }
+    }
+    fclose(outputFile);
 }

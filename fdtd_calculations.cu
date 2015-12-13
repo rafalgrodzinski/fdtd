@@ -1,7 +1,6 @@
 #include "fdtd_calculations.h"
 
-
-#define OFFSET(p, x, y, z) (p[(z)*ny*nx + (y)*nx + (x)])
+#include "utils.h"
 
 
 __global__ void updateHField(float *hx,       float *hy,       float *hz,
