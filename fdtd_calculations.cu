@@ -55,6 +55,36 @@ __global__ void updateDField(float *dxTarget, float *dyTarget, float *dzTarget,
                              int nx, int ny, int nz,
                              float dt, float dx, float dy, float dz)
 {
+    int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    int iy = threadIdx.y + blockIdx.y * blockDim.y;
+    int iz = threadIdx.z + blockIdx.z * blockDim.z;
+
+    // Update dx
+    if(ix > 0 && ix < nx-1 &&
+       iy > 1 && iy < ny-1 &&
+       iz > 1 && iz < nz-1) {
+        OFFSET(dxSource, ix, iy, iz) = OFFSET(dxSource, ix, iy, iz) +
+                                       dt/dy * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix, iy-1, iz)) -
+                                       dt/dz * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix, iy, iz-1));
+    }
+    
+    // Update dy
+    if(ix > 1 && ix < nx-1 &&
+       iy > 0 && iy < ny-1 &&
+       iz > 1 && iz < nz-1) {
+        OFFSET(dyTarget, ix, iy, iz) = OFFSET(dySource, ix, iy, iz) +
+                                       dt/dz * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy, iz-1)) -
+                                       dt/dx * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix-1, iy, iz));
+    }
+    
+    // Update dz
+    if(ix > 1 && ix < nx-1 &&
+       iy > 1 && iy < ny-1 &&
+       iz > 0 && iz < nz-1) {
+            OFFSET(dzTarget, ix, iy, iz) = OFFSET(dzSource, ix, iy, iz) +
+                                           dt/dx * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix-1, iy, iz)) -
+                                           dt/dy * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy-1, iz));
+    }
 }
 
 
