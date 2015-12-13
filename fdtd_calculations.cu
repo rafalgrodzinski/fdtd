@@ -204,17 +204,208 @@ __global__ void updateSource(float *dzTarget, float *dzSource,
                              float *hx,       float *hy,
                              int *src, float *jz,
                              float dt, float dx, float dy, float dz,
-                             int nsrc, int runsCount)
+                             int nsrc, int runIndex)
 {
+    /*int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    int iy = threadIdx.y + blockIdx.y * blockDim.y;
+    int iz = threadIdx.z + blockIdx.z * blockDim.z;
+
+    // Update source
+    if(ix == 0 && iy == 0 && iz == 0) {
+        for(int i=0; i < nsrc; i++) {
+            x = src(i, 1)
+            y = src(i, 2)
+            z = src(i, 3)
+    
+            OFFSET(dzTarget, x, y, z) = OFFSET(dzSource, x, y, z) +
+                                 dt/dx * (OFFSET(hy, x, y, z) - OFFSET(hy, x-1, y, z)) -
+                                 dt/dy * (OFFSET(hx, x, y, z) - OFFSET(hx, x, y-1, z)) -
+                                 jz(((runs_count-1)*3)+1)
+        }
+    }*/
 }
 
 
 __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTarget,
                                   float *exSource, float *eySource, float *ezSource,
                                   float *rpx0,     float *rpy0,     float *rpz0,
-                                  float *rpxEnd,   float *rpyEnd,   float *rpZend,
+                                  float *rpxEnd,   float *rpyEnd,   float *rpzEnd,
                                   int nx, int ny, int nz,
                                   float dt, float dx, float dy, float dz,
                                   float mu0, float eps0)
 {
+    int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    int iy = threadIdx.y + blockIdx.y * blockDim.y;
+    int iz = threadIdx.z + blockIdx.z * blockDim.z;
+
+    // Update ex
+    if(ix > 0  && ix < nx-1 && 
+       iy == 0 && 
+       iz > 1  && iz < nz-1) {
+        OFFSET(exTarget, ix, iy, iz) = 1/(dt + dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy, iz))) *  
+                                       (                                                        
+                                        (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        OFFSET(exTarget, ix, iy+1, iz) +                               
+                                        (dt + dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        OFFSET(exSource, ix, iy+1, iz) -                               
+                                        (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy,iz))) *    
+                                        OFFSET(exSource, ix, iy, iz)                                   
+                                       );
+    }
+
+    if(ix > 0     && ix < nx-1 && 
+       iy == ny-1 && 
+       iz > 1     && iz < nz-1) {
+        OFFSET(exTarget, ix, iy, iz) = 1/(dt + dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy, iz))) *  
+                                       (                                                          
+                                        (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                        OFFSET(exTarget, ix, iy-1, iz) +                                 
+                                        (dt + dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                        OFFSET(exSource, ix, iy-1, iz) -                                 
+                                        (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy, iz))) *   
+                                        OFFSET(exSource, ix, iy, iz)                                     
+                                       );
+    }
+
+    if(ix > 0 && ix < nx-1 && 
+       iy > 1 && iy < ny-1 && 
+       iz == 0) {
+        OFFSET(exTarget, ix, iy, iz) = 1/(dt + dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz))) *  
+                                       (                                                        
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        OFFSET(exTarget, ix, iy, iz+1) +                               
+                                        (dt + dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        OFFSET(exSource, ix, iy, iz+1) -                               
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz))) *   
+                                        OFFSET(exSource, ix, iy, iz)                                   
+                                       );
+    }
+
+    if(ix > 0 && ix < nx-1 && 
+       iy > 1 && iy < ny-1 && 
+       iz == nz-1) {
+        OFFSET(exTarget, ix, iy, iz) = 1/(dt + dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz))) *  
+                                       (                                                          
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        OFFSET(exTarget, ix, iy, iz-1) +                                 
+                                        (dt + dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        OFFSET(exSource, ix, iy, iz-1) -                                 
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz))) *   
+                                        OFFSET(exSource, ix, iy, iz)                                     
+                                       );
+    }
+
+    // Update ey
+    if(ix == 0 && 
+       iy > 0  && iy <= ny-1 && 
+       iz > 1  && iz <= nz-1) {
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dt + dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix, iy, iz))) *  
+                                       (                                                        
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        OFFSET(eyTarget, ix+1, iy, iz) +                               
+                                        (dt + dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        OFFSET(eySource, ix+1, iy, iz) -                               
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix, iy, iz))) *   
+                                        OFFSET(eySource, ix, iy, iz)                                   
+                                       );
+    }
+
+    if(ix == nx-1 && 
+       iy > 0     && iy < ny-1 && 
+       iz > 1     && iz < nz-1) {
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dt + dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix, iy, iz)))  * 
+                                       (                                                          
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        OFFSET(eySource, ix-1, iy, iz) +                                 
+                                        (dt + dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        OFFSET(eySource, ix-1, iy, iz) -                                 
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix, iy, iz))) *   
+                                        OFFSET(eySource, ix, iy, iz)                                     
+                                       );
+    }
+
+    if(ix > 1 && ix < nx-1 && 
+       iy > 0 && iy < ny-1 && 
+       iz == 0) {
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dt + dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz))) *  
+                                       (                                                        
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        OFFSET(eyTarget, ix, iy,iz+1) +                                
+                                        (dt + dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        OFFSET(eySource, ix, iy, iz+1) -                               
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpz0, ix, iy, iz))) *   
+                                        OFFSET(eySource, ix, iy, iz)                                   
+                                       );
+    }
+
+    if(ix > 1 && ix < nx-1 && 
+       iy > 0 && iy < ny-1 && 
+       iz == nz-1) {
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dt + dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz))) *  
+                                       (                                                          
+                                        (dt - dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        OFFSET(eyTarget, ix, iy, iz-1) +                                 
+                                        (dt + dz * sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        OFFSET(eySource, ix, iy, iz-1) -                                 
+                                        (dt - dz *sqrt(mu0 * eps0 * OFFSET(rpzEnd, ix, iy, iz))) *    
+                                        OFFSET(eySource, ix, iy, iz)                                     
+                                       );
+    }
+
+    // Update ez
+    if(ix == 0 && 
+       iy > 1  && iy < ny-1 && 
+       iz > 0  && iz < nz-1) {
+        OFFSET(ezTarget, ix, iy, iz) = 1/(dt + dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix, iy, iz))) *  
+                                       (                                                        
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        OFFSET(ezTarget, ix+1, iy, iz) +                               
+                                        (dt + dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        OFFSET(ezSource, ix+1, iy, iz) -                                
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpx0, ix, iy, iz)))  *  
+                                        OFFSET(ezSource, ix, iy, iz)                                   
+                                       );
+    }
+      
+    if(ix == nx-1 && 
+       iy > 1     && iy < ny-1 && 
+       iz > 0     && iz < nz-1) {
+        OFFSET(ezTarget, ix, iy, iz) = 1/(dt + dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix, iy, iz))) *  
+                                       (                                                          
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        OFFSET(ezTarget, ix-1, iy, iz) +                                 
+                                        (dt + dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        OFFSET(ezSource, ix-1, iy, iz) -                                 
+                                        (dt - dx * sqrt(mu0 * eps0 * OFFSET(rpxEnd, ix, iy, iz))) *   
+                                        OFFSET(ezSource, ix, iy, iz)                                     
+                                       );
+    }
+    
+    if(ix > 1  && ix < nx-1 && 
+       iy == 0 && 
+       iz > 0  && iz < nz-1) { 
+        OFFSET(ezTarget, ix, iy, iz) = 1/(dt + dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy, iz))) *  
+                                       (                                                        
+                                        (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        OFFSET(ezTarget, ix, iy+1, iz) +                                
+                                        (dt + dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        OFFSET(ezSource, ix, iy+1, iz) -                               
+                                        (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpy0, ix, iy, iz))) *   
+                                        OFFSET(ezSource, ix, iy, iz)                                   
+                                       );
+    }
+      
+    if(ix > 1     && ix < nx-1 && 
+       iy == ny-1 && 
+       iz > 0     && iz < nz-1) { 
+            OFFSET(ezTarget, ix, iy, iz) = 1/(dt + dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy, iz))) *  
+                                           (                                                          
+                                            (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                            OFFSET(ezTarget, ix, iy-1, iz) +                                 
+                                            (dt + dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                            OFFSET(ezSource, ix, iy-1, iz) -                                 
+                                            (dt - dy * sqrt(mu0 * eps0 * OFFSET(rpyEnd, ix, iy, iz))) *   
+                                            OFFSET(ezSource, ix, iy, iz)                                     
+                                           );
+    }
 }
