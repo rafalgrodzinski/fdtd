@@ -200,29 +200,30 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
 }
 
 
-__global__ void updateSource(float *dzTarget, float *dzSource,
-                             float *hx,       float *hy,
-                             int *src, float *jz,
-                             float dt, float dx, float dy, float dz,
-                             int nsrc, int runIndex)
+__global__ void updateSources(float *dzTarget, float *dzSource,
+                              float *hx,       float *hy,
+                              int nx, int ny, int nz,
+                              float dt, float dx, float dy, float dz,
+                              int *src, float *jz,
+                              int nsrc, int currIteration)
 {
-    /*int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    int ix = threadIdx.x + blockIdx.x * blockDim.x;
     int iy = threadIdx.y + blockIdx.y * blockDim.y;
     int iz = threadIdx.z + blockIdx.z * blockDim.z;
 
     // Update source
     if(ix == 0 && iy == 0 && iz == 0) {
         for(int i=0; i < nsrc; i++) {
-            x = src(i, 1)
-            y = src(i, 2)
-            z = src(i, 3)
+            int x = src[i * 3 + 0];
+            int y = src[i * 3 + 1];
+            int z = src[i * 3 + 2];
     
             OFFSET(dzTarget, x, y, z) = OFFSET(dzSource, x, y, z) +
-                                 dt/dx * (OFFSET(hy, x, y, z) - OFFSET(hy, x-1, y, z)) -
-                                 dt/dy * (OFFSET(hx, x, y, z) - OFFSET(hx, x, y-1, z)) -
-                                 jz(((runs_count-1)*3)+1)
+                                        dt/dx * (OFFSET(hy, x, y, z) - OFFSET(hy, x-1, y, z)) -
+                                        dt/dy * (OFFSET(hx, x, y, z) - OFFSET(hx, x, y-1, z)) -
+                                        jz[currIteration];
         }
-    }*/
+    }
 }
 
 
