@@ -1,11 +1,51 @@
 #include "fdtd_calculations.h"
 
+
+#define OFFSET(p, x, y, z) (p[(z)*ny*nx + (y)*nx + (x)])
+
+
 __global__ void updateHField(float *hx,       float *hy,       float *hz,
                              float *exSource, float *eySource, float *ezSource,
                              int nx, int ny, int nz,
                              float dt, float dx, float dy, float dz,
                              float mu0)
 {
+    int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    int iy = threadIdx.y + blockIdx.y * blockDim.y;
+    int iz = threadIdx.z + blockIdx.z * blockDim.z;
+
+    // Update hx
+    if(ix > 0 && ix < nx-1 &&
+       iy > 0 && iy < ny-1 &&
+       iz > 0 && iz < nz-1) {
+        OFFSET(hx, ix, iy, iz) = OFFSET(hx, ix, iy, iz) -
+                                 dt/(mu0 * dy) *
+                                 (OFFSET(ezSource, ix, iy+1, iz) - OFFSET(ezSource, ix, iy, iz)) +
+                                 dt/(mu0 * dz) *
+                                 (OFFSET(eySource, ix, iy, iz+1) - OFFSET(eySource, ix, iy, iz));
+    }
+    
+    // Update hy
+    if(ix > 0 && ix < nx-1 &&
+       iy > 1 && iy < ny-1 &&
+       iz > 0 && iz < nz-1) {
+        OFFSET(hy, ix, iy, iz) = OFFSET(hy, ix, iy, iz) -
+                                 dt/(mu0 * dz) *
+                                 (OFFSET(exSource, ix, iy, iz+1) - OFFSET(exSource, ix, iy, iz)) +
+                                 dt/(mu0 * dx) *
+                                 (OFFSET(ezSource, ix+1, iy, iz) - OFFSET(ezSource, ix, iy, iz));
+    }
+    
+    // Update hz
+    if(ix > 0 && ix < nx-1 &&
+       iy > 0 && iy < ny-1 &&
+       iz > 1 && iz < nz-1) {
+        OFFSET(hz, ix, iy, iz) = OFFSET(hz, ix, iy, iz) -
+                                 dt/(mu0 * dx) *
+                                 (OFFSET(eySource, ix+1, iy, iz) - OFFSET(eySource, ix, iy, iz)) +
+                                 dt/(mu0 * dy) *
+                                 (OFFSET(exSource, ix, iy+1, iz) - OFFSET(exSource, ix, iy, iz));
+    }
 }
 
 
