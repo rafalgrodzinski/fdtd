@@ -62,7 +62,8 @@ void deallocField(FdtdField *);
 FdtdField *initDeviceFieldWithParams(FdtdParams *);
 void deallocDeviceField(FdtdField *);
 
-void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
 void setupMurBoundary(FdtdParams *params, FdtdField *field);
+void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
+void setupSources(FdtdParams *params, FdtdField *field);
 
 #endif

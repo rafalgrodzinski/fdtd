@@ -25,12 +25,15 @@ int main(int argc, char **argv)
 
     printf("Initializing field...\n");
     field = initFieldWithParams(params);
+    setupMurBoundary(params, field);
+    printf("Initializing device field...\n");
     deviceField = initDeviceFieldWithParams(params);
 
     printf("Reading materials data...\n");
     loadMaterials(params, field, "data/mat_specs_riken", params->inputPath);
-    printf("Setting up mur boundary...\n");
-    setupMurBoundary(params, field);
+
+    printf("Initializing sources...\n");
+    setupSources(params, field);
 
     // Setup CUDA parameters
     dim3 gridSize = dim3((params->nx + BLOCK_X - 1)/BLOCK_X,
@@ -610,4 +613,9 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
             }
         }
     }
+}
+
+
+void setupSources(FdtdParams *params, FdtdField *field)
+{
 }
