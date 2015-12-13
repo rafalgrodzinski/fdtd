@@ -1,13 +1,10 @@
 CC=nvcc
 CFLAGS=
 OUTPUT=fdtd
-SOURCES=fdtd.cu utils.o
+SOURCES=fdtd.cu utils.cu fdtd_calculations.cu
 
-fdtd: utils.o
+fdtd: ${SOURCES}
 	${CC} -o ${OUTPUT} ${CFLAGS} ${SOURCES}
-
-utils.o:
-	${CC} ${CFLAGS} -c utils.c
     
 clean:
 	rm ${OUTPUT} *.mod *.o *.s run*.sh.o* run*.sh.e* output/* 2> /dev/null
