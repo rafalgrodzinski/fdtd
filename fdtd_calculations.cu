@@ -98,6 +98,105 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
                              int nx, int ny, int nz,
                              float dt, float eps0)
 {
+    int ix = threadIdx.x + blockIdx.x * blockDim.x;
+    int iy = threadIdx.y + blockIdx.y * blockDim.y;
+    int iz = threadIdx.z + blockIdx.z * blockDim.z;
+
+    // Update ex
+    if(ix > 0 && ix < nx-1 &&
+       iy > 1 && iy < ny-1 &&
+       iz > 1 && iz < nz-1) {
+        OFFSET(exTarget, ix, iy, iz) = (
+                                        1.0/(2.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
+                                        2.0 * dt *
+                                        (
+                                         eps0 * OFFSET(epsS, ix, iy, iz) +
+                                         OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
+                                        ) +
+                                        OFFSET(sigma, ix, iy, iz) * dt * dt)
+                                       ) *
+                                       (
+                                        (
+                                         4.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
+                                         2.0 * dt *
+                                         (
+                                          eps0 * OFFSET(epsS, ix, iy, iz) +
+                                          OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
+                                         ) -
+                                         OFFSET(sigma, ix, iy, iz) * dt * dt
+                                        ) *
+                                        OFFSET(exSource0, ix, iy, iz) -
+                                        (2.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
+                                        OFFSET(exSource1, ix, iy, iz) +
+                                        (2.0 * (dt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dxSource0, ix, iy, iz) -
+                                        (2.0 * dt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dxSource1, ix, iy, iz) +
+                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dxSource2, ix, iy, iz)
+                                       );
+    }
+    
+    // Update ey
+    if(ix >= 2 && ix <= nx-1 &&
+       iy >= 1 && iy <= ny-1 &&
+       iz >= 2 && iz <= nz-1) {
+        OFFSET(eyTarget, ix, iy, iz) = (
+                                        1.0/(2.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
+                                        2.0 * dt *
+                                        (
+                                         eps0 * OFFSET(epsS, ix, iy, iz) +
+                                         OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
+                                        ) +
+                                        OFFSET(sigma, ix, iy, iz) * dt * dt)
+                                       ) *
+                                       (
+                                        (
+                                         4.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
+                                         2.0 * dt *
+                                         (
+                                          eps0 * OFFSET(epsS, ix, iy, iz) +
+                                          OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
+                                         ) -
+                                         OFFSET(sigma, ix, iy, iz) * dt * dt
+                                        ) *
+                                        OFFSET(eySource0, ix, iy, iz) -
+                                        (2.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
+                                        OFFSET(eySource1, ix, iy, iz) +
+                                        (2.0 * (dt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dySource0, ix, iy, iz) -
+                                        (2.0 * dt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dySource1, ix, iy, iz) +
+                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dySource2, ix, iy, iz)
+                                       );
+    }
+    
+    // Update ez
+    if(ix >= 2 && ix <= nx-1 &&
+       iy >= 1 && iy <= ny-1 &&
+       iz >= 2 && iz <= nz-1) {
+        OFFSET(ezTarget, ix, iy, iz) = (
+                                        1.0/(2.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
+                                        2.0 * dt *
+                                        (
+                                         eps0 * OFFSET(epsS, ix, iy, iz) +
+                                         OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
+                                        ) +
+                                        OFFSET(sigma, ix, iy, iz) * dt * dt)
+                                       ) *
+                                       (
+                                        (
+                                         4.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
+                                         2.0 * dt *
+                                         (
+                                          eps0 * OFFSET(epsS, ix, iy, iz) +
+                                          OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
+                                         ) -
+                                         OFFSET(sigma, ix, iy, iz) * dt * dt
+                                        ) *
+                                        OFFSET(ezSource0, ix, iy, iz) -
+                                        (2.0 * eps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
+                                        OFFSET(ezSource1, ix, iy, iz) +
+                                        (2.0 * (dt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dzSource0, ix, iy, iz) -
+                                        (2.0 * dt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dzSource1, ix, iy, iz) +
+                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dzSource2, ix, iy, iz)
+                                       );
+    }
 }
 
 
