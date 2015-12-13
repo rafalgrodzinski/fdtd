@@ -25,11 +25,12 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
                              int nx, int ny, int nz,
                              float dt, float eps0);
 
-__global__ void updateSource(float *dzTarget, float *dzSource,
-                             float *hx,       float *hy,
-                             int *src, float *jz,
-                             float dt, float dx, float dy, float dz,
-                             int nsrc, int runsCount);
+__global__ void updateSources(float *dzTarget, float *dzSource,
+                              float *hx,       float *hy,
+                              int nx, int ny, int nz,
+                              float dt, float dx, float dy, float dz,
+                              int *src, float *jz,
+                              int nsrc, int currIteration);
 
 __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTarget,
                                   float *exSource, float *eySource, float *ezSource,

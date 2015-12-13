@@ -2,10 +2,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <cuda.h>
-#include <cuda_runtime_api.h>
 
 #include "utils.h"
+#include "fdtd_calculations.h"
 
 
 #define BLOCK_X 4
@@ -44,11 +43,137 @@ int main(int argc, char **argv)
         // Run 0
         printf("Running iteration %d", i);
 
+        updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
+                                              deviceField->ex2, deviceField->ey2, deviceField->ez2,                 
+                                              params->nx, params->ny, params->nz,                 
+                                              params->dt, params->dx, params->dy, params->dz, 
+                                              params->mu0);
+        CHECK(cudaDeviceSynchronize())
+
+        updateDField<<<gridSize, blockSize>>>(deviceField->dx0, deviceField->dy0, deviceField->dz0, 
+                                              deviceField->dx2, deviceField->dy2, deviceField->dz2, 
+                                              deviceField->hx,  deviceField->hy,  deviceField->hz,    
+                                              params->nx, params->ny, params->nz, 
+                                              params->dt, params->dx, params->dy, params->dz);
+        CHECK(cudaDeviceSynchronize())
+ 
+        updateSources<<<gridSize, blockSize>>>(deviceField->dz0, deviceField->dz2,                                 
+                                               deviceField->hx,  deviceField->hy,                                   
+                                               params->nx, params->ny, params->nz,
+                                               params->dt, params->dx, params->dy, params->dz, 
+                                               params->sources, params->jz,                                
+                                               params->sourcesCount, i);
+        CHECK(cudaDeviceSynchronize())
+            
+        updateEField<<<gridSize, blockSize>>>(deviceField->ex0, deviceField->ey0, deviceField->ez0, 
+                                              deviceField->ex2, deviceField->ey2, deviceField->ez2, 
+                                              deviceField->ex1, deviceField->ey1, deviceField->ez1, 
+                                              deviceField->dx0, deviceField->dy0, deviceField->dz0, 
+                                              deviceField->dx2, deviceField->dy2, deviceField->dz2, 
+                                              deviceField->dx1, deviceField->dy1, deviceField->dz1, 
+                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD,             
+                                              params->nx, params->ny, params->nz, 
+                                              params->dt, params->eps0);
+        CHECK(cudaDeviceSynchronize())
+            
+        updateMurBoundary<<<gridSize, blockSize>>>(deviceField->ex0,  deviceField->ey0,  deviceField->ez0,                 
+                                                   deviceField->ex2,  deviceField->ey2,  deviceField->ez2,                 
+                                                   deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
+                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd,                         
+                                                   params->nx, params->ny, params->nz,                 
+                                                   params->dt, params->dx, params->dy, params->dz, 
+                                                   params->mu0, params->eps0);
+        CHECK(cudaDeviceSynchronize());
+
         // Run 1
         printf("Running iteration %d", i+1);
 
+        updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
+                                              deviceField->ex0, deviceField->ey0, deviceField->ez0,                 
+                                              params->nx, params->ny, params->nz,                 
+                                              params->dt, params->dx, params->dy, params->dz, 
+                                              params->mu0);
+        CHECK(cudaDeviceSynchronize())
+
+        updateDField<<<gridSize, blockSize>>>(deviceField->dx1, deviceField->dy1, deviceField->dz1, 
+                                              deviceField->dx0, deviceField->dy0, deviceField->dz0, 
+                                              deviceField->hx,  deviceField->hy,  deviceField->hz,    
+                                              params->nx, params->ny, params->nz, 
+                                              params->dt, params->dx, params->dy, params->dz);
+        CHECK(cudaDeviceSynchronize())
+ 
+        updateSources<<<gridSize, blockSize>>>(deviceField->dz1, deviceField->dz0,                                 
+                                               deviceField->hx,  deviceField->hy,                                   
+                                               params->nx, params->ny, params->nz,
+                                               params->dt, params->dx, params->dy, params->dz, 
+                                               params->sources, params->jz,                                
+                                               params->sourcesCount, i);
+        CHECK(cudaDeviceSynchronize())
+            
+        updateEField<<<gridSize, blockSize>>>(deviceField->ex1, deviceField->ey1, deviceField->ez1, 
+                                              deviceField->ex0, deviceField->ey0, deviceField->ez0, 
+                                              deviceField->ex2, deviceField->ey2, deviceField->ez2, 
+                                              deviceField->dx1, deviceField->dy1, deviceField->dz1, 
+                                              deviceField->dx0, deviceField->dy0, deviceField->dz0, 
+                                              deviceField->dx2, deviceField->dy2, deviceField->dz2, 
+                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD,             
+                                              params->nx, params->ny, params->nz, 
+                                              params->dt, params->eps0);
+        CHECK(cudaDeviceSynchronize())
+            
+        updateMurBoundary<<<gridSize, blockSize>>>(deviceField->ex1,  deviceField->ey1,  deviceField->ez1,                 
+                                                   deviceField->ex0,  deviceField->ey0,  deviceField->ez0,                 
+                                                   deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
+                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd,                         
+                                                   params->nx, params->ny, params->nz,                 
+                                                   params->dt, params->dx, params->dy, params->dz, 
+                                                   params->mu0, params->eps0);
+        CHECK(cudaDeviceSynchronize())
+
         // Run 2
         printf("Running iteration %d", i+2);
+
+        updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
+                                              deviceField->ex1, deviceField->ey1, deviceField->ez1,                 
+                                              params->nx, params->ny, params->nz,                 
+                                              params->dt, params->dx, params->dy, params->dz, 
+                                              params->mu0);
+        CHECK(cudaDeviceSynchronize())
+
+        updateDField<<<gridSize, blockSize>>>(deviceField->dx2, deviceField->dy2, deviceField->dz2, 
+                                              deviceField->dx1, deviceField->dy1, deviceField->dz1, 
+                                              deviceField->hx,  deviceField->hy,  deviceField->hz,    
+                                              params->nx, params->ny, params->nz, 
+                                              params->dt, params->dx, params->dy, params->dz);
+        CHECK(cudaDeviceSynchronize())
+ 
+        updateSources<<<gridSize, blockSize>>>(deviceField->dz2, deviceField->dz1,                                 
+                                               deviceField->hx,  deviceField->hy,                                   
+                                               params->nx, params->ny, params->nz,
+                                               params->dt, params->dx, params->dy, params->dz, 
+                                               params->sources, params->jz,                                
+                                               params->sourcesCount, i);
+        CHECK(cudaDeviceSynchronize())
+            
+        updateEField<<<gridSize, blockSize>>>(deviceField->ex2, deviceField->ey2, deviceField->ez2, 
+                                              deviceField->ex1, deviceField->ey1, deviceField->ez1, 
+                                              deviceField->ex0, deviceField->ey0, deviceField->ez0, 
+                                              deviceField->dx2, deviceField->dy2, deviceField->dz2, 
+                                              deviceField->dx1, deviceField->dy1, deviceField->dz1, 
+                                              deviceField->dx0, deviceField->dy0, deviceField->dz0, 
+                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD,             
+                                              params->nx, params->ny, params->nz, 
+                                              params->dt, params->eps0);
+        CHECK(cudaDeviceSynchronize())
+            
+        updateMurBoundary<<<gridSize, blockSize>>>(deviceField->ex2,  deviceField->ey2,  deviceField->ez2,                 
+                                                   deviceField->ex1,  deviceField->ey1,  deviceField->ez1,                 
+                                                   deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
+                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd,                         
+                                                   params->nx, params->ny, params->nz,                 
+                                                   params->dt, params->dx, params->dy, params->dz, 
+                                                   params->mu0, params->eps0);
+        CHECK(cudaDeviceSynchronize())
     }
 
     // Clean up
@@ -123,11 +248,11 @@ FdtdParams *initParamsWithPath(const char *filePath)
     //fsigma (sigma)
     fscanf(paramsFile, "%s %f\n", temp, &params->sigma);
     //feps_s (eps_s)
-    fscanf(paramsFile, "%s %f\n", temp, &params->eps_s);
+    fscanf(paramsFile, "%s %f\n", temp, &params->epsS);
     //feps_inf (eps_i)
-    fscanf(paramsFile, "%s %f\n", temp, &params->eps_i);
+    fscanf(paramsFile, "%s %f\n", temp, &params->epsI);
     //ftau_d (tau_d)
-    fscanf(paramsFile, "%s %f\n", temp, &params->tau_d);
+    fscanf(paramsFile, "%s %f\n", temp, &params->tauD);
     
     fclose(paramsFile);
 
@@ -159,9 +284,9 @@ void printParams(FdtdParams *params)
                                                          params->sources[i*3 + 1],
                                                          params->sources[i*3 + 2]);
     printf("Default sigma:              %g\n", params->sigma);
-    printf("Default eps_s:              %g\n", params->eps_s);
-    printf("Default eps_i:              %g\n", params->eps_i);
-    printf("Default tau_d:              %g\n", params->tau_d);
+    printf("Default eps_s:              %g\n", params->epsS);
+    printf("Default eps_i:              %g\n", params->epsI);
+    printf("Default tau_d:              %g\n", params->tauD);
     printf("\n");
 }
 
@@ -173,6 +298,10 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
 
     // e
+    CHECK(cudaHostAlloc(&field->ex0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez0, n, cudaHostAllocDefault))
+
     CHECK(cudaHostAlloc(&field->ex1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->ey1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->ez1, n, cudaHostAllocDefault))
@@ -181,16 +310,16 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     CHECK(cudaHostAlloc(&field->ey2, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->ez2, n, cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->ex3, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey3, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez3, n, cudaHostAllocDefault))
-
     // h
     CHECK(cudaHostAlloc(&field->hx, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->hy, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->hz, n, cudaHostAllocDefault))
 
     // d
+    CHECK(cudaHostAlloc(&field->dx0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz0, n, cudaHostAllocDefault))
+
     CHECK(cudaHostAlloc(&field->dx1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dy1, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dz1, n, cudaHostAllocDefault))
@@ -199,24 +328,20 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     CHECK(cudaHostAlloc(&field->dy2, n, cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dz2, n, cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->dx3, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dy3, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dz3, n, cudaHostAllocDefault))
-
     // sigma, eps, tau
     CHECK(cudaHostAlloc(&field->sigma, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->eps_s, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->eps_i, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->tau_d, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->epsS, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->epsI, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->tauD, n, cudaHostAllocDefault))
 
     // rp
-    CHECK(cudaHostAlloc(&field->rp_x_0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rp_y_0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rp_z_0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpx0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpy0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpz0, n, cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->rp_x_end, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rp_y_end, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rp_z_end, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpxEnd, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpyEnd, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpzEnd, n, cudaHostAllocDefault))
 
     return field;
 }
@@ -225,6 +350,10 @@ FdtdField *initFieldWithParams(FdtdParams *params)
 void deallocField(FdtdField *field)
 {
     // e
+    CHECK(cudaFree(field->ex0))
+    CHECK(cudaFree(field->ey0))
+    CHECK(cudaFree(field->ez0))
+
     CHECK(cudaFree(field->ex1))
     CHECK(cudaFree(field->ey1))
     CHECK(cudaFree(field->ez1))
@@ -233,16 +362,16 @@ void deallocField(FdtdField *field)
     CHECK(cudaFree(field->ey2))
     CHECK(cudaFree(field->ez2))
 
-    CHECK(cudaFree(field->ex3))
-    CHECK(cudaFree(field->ey3))
-    CHECK(cudaFree(field->ez3))
-
     // h
     CHECK(cudaFree(field->hx))
     CHECK(cudaFree(field->hy))
     CHECK(cudaFree(field->hz))
 
     // d
+    CHECK(cudaFree(field->dx0))
+    CHECK(cudaFree(field->dy0))
+    CHECK(cudaFree(field->dz0))
+
     CHECK(cudaFree(field->dx1))
     CHECK(cudaFree(field->dy1))
     CHECK(cudaFree(field->dz1))
@@ -251,24 +380,20 @@ void deallocField(FdtdField *field)
     CHECK(cudaFree(field->dy2))
     CHECK(cudaFree(field->dz2))
 
-    CHECK(cudaFree(field->dx3))
-    CHECK(cudaFree(field->dy3))
-    CHECK(cudaFree(field->dz3))
-
     // sigma, eps, tau
     CHECK(cudaFree(&field->sigma))
-    CHECK(cudaFree(&field->eps_s))
-    CHECK(cudaFree(&field->eps_i))
-    CHECK(cudaFree(&field->tau_d))
+    CHECK(cudaFree(&field->epsS))
+    CHECK(cudaFree(&field->epsI))
+    CHECK(cudaFree(&field->tauD))
 
     // rp
-    CHECK(cudaFree(&field->rp_x_0))
-    CHECK(cudaFree(&field->rp_y_0))
-    CHECK(cudaFree(&field->rp_z_0))
+    CHECK(cudaFree(&field->rpx0))
+    CHECK(cudaFree(&field->rpy0))
+    CHECK(cudaFree(&field->rpz0))
 
-    CHECK(cudaFree(&field->rp_x_end))
-    CHECK(cudaFree(&field->rp_y_end))
-    CHECK(cudaFree(&field->rp_z_end))
+    CHECK(cudaFree(&field->rpxEnd))
+    CHECK(cudaFree(&field->rpyEnd))
+    CHECK(cudaFree(&field->rpzEnd))
 
     free(field);
 }
@@ -281,6 +406,10 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
 
     // e
+    CHECK(cudaMalloc(&field->ex0, n))
+    CHECK(cudaMalloc(&field->ey0, n))
+    CHECK(cudaMalloc(&field->ez0, n))
+
     CHECK(cudaMalloc(&field->ex1, n))
     CHECK(cudaMalloc(&field->ey1, n))
     CHECK(cudaMalloc(&field->ez1, n))
@@ -289,16 +418,16 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     CHECK(cudaMalloc(&field->ey2, n))
     CHECK(cudaMalloc(&field->ez2, n))
 
-    CHECK(cudaMalloc(&field->ex3, n))
-    CHECK(cudaMalloc(&field->ey3, n))
-    CHECK(cudaMalloc(&field->ez3, n))
-
     // h
     CHECK(cudaMalloc(&field->hx, n))
     CHECK(cudaMalloc(&field->hy, n))
     CHECK(cudaMalloc(&field->hz, n))
 
     // d
+    CHECK(cudaMalloc(&field->dx0, n))
+    CHECK(cudaMalloc(&field->dy0, n))
+    CHECK(cudaMalloc(&field->dz0, n))
+
     CHECK(cudaMalloc(&field->dx1, n))
     CHECK(cudaMalloc(&field->dy1, n))
     CHECK(cudaMalloc(&field->dz1, n))
@@ -307,24 +436,20 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     CHECK(cudaMalloc(&field->dy2, n))
     CHECK(cudaMalloc(&field->dz2, n))
 
-    CHECK(cudaMalloc(&field->dx3, n))
-    CHECK(cudaMalloc(&field->dy3, n))
-    CHECK(cudaMalloc(&field->dz3, n))
-
     // sigma, eps, tau
-    CHECK(cudaMalloc(&field->eps_i, n))
-    CHECK(cudaMalloc(&field->eps_s, n))
-    CHECK(cudaMalloc(&field->tau_d, n))
+    CHECK(cudaMalloc(&field->epsI, n))
+    CHECK(cudaMalloc(&field->epsS, n))
+    CHECK(cudaMalloc(&field->tauD, n))
     CHECK(cudaMalloc(&field->sigma, n))
 
     // rp
-    CHECK(cudaMalloc(&field->rp_x_0, n))
-    CHECK(cudaMalloc(&field->rp_y_0, n))
-    CHECK(cudaMalloc(&field->rp_z_0, n))
+    CHECK(cudaMalloc(&field->rpx0, n))
+    CHECK(cudaMalloc(&field->rpy0, n))
+    CHECK(cudaMalloc(&field->rpz0, n))
 
-    CHECK(cudaMalloc(&field->rp_x_end, n))
-    CHECK(cudaMalloc(&field->rp_y_end, n))
-    CHECK(cudaMalloc(&field->rp_z_end, n))
+    CHECK(cudaMalloc(&field->rpxEnd, n))
+    CHECK(cudaMalloc(&field->rpyEnd, n))
+    CHECK(cudaMalloc(&field->rpzEnd, n))
 
     return field;
 }
@@ -333,6 +458,10 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
 void deallocDeviceField(FdtdField *field)
 {
     // e
+    CHECK(cudaFree(field->ex0))
+    CHECK(cudaFree(field->ey0))
+    CHECK(cudaFree(field->ez0))
+
     CHECK(cudaFree(field->ex1))
     CHECK(cudaFree(field->ey1))
     CHECK(cudaFree(field->ez1))
@@ -341,16 +470,16 @@ void deallocDeviceField(FdtdField *field)
     CHECK(cudaFree(field->ey2))
     CHECK(cudaFree(field->ez2))
 
-    CHECK(cudaFree(field->ex3))
-    CHECK(cudaFree(field->ey3))
-    CHECK(cudaFree(field->ez3))
-
     // h
     CHECK(cudaFree(field->hx))
     CHECK(cudaFree(field->hy))
     CHECK(cudaFree(field->hz))
 
     // d
+    CHECK(cudaFree(field->dx0))
+    CHECK(cudaFree(field->dy0))
+    CHECK(cudaFree(field->dz0))
+
     CHECK(cudaFree(field->dx1))
     CHECK(cudaFree(field->dy1))
     CHECK(cudaFree(field->dz1))
@@ -359,24 +488,20 @@ void deallocDeviceField(FdtdField *field)
     CHECK(cudaFree(field->dy2))
     CHECK(cudaFree(field->dz2))
 
-    CHECK(cudaFree(field->dx3))
-    CHECK(cudaFree(field->dy3))
-    CHECK(cudaFree(field->dz3))
-
     // sigma, eps, tau
-    CHECK(cudaFree(field->eps_i))
-    CHECK(cudaFree(field->eps_s))
-    CHECK(cudaFree(field->tau_d))
+    CHECK(cudaFree(field->epsI))
+    CHECK(cudaFree(field->epsS))
+    CHECK(cudaFree(field->tauD))
     CHECK(cudaFree(field->sigma))
 
     // rp
-    CHECK(cudaFree(field->rp_x_0))
-    CHECK(cudaFree(field->rp_y_0))
-    CHECK(cudaFree(field->rp_z_0))
+    CHECK(cudaFree(field->rpx0))
+    CHECK(cudaFree(field->rpy0))
+    CHECK(cudaFree(field->rpz0))
 
-    CHECK(cudaFree(field->rp_x_end))
-    CHECK(cudaFree(field->rp_y_end))
-    CHECK(cudaFree(field->rp_z_end))
+    CHECK(cudaFree(field->rpxEnd))
+    CHECK(cudaFree(field->rpyEnd))
+    CHECK(cudaFree(field->rpzEnd))
 }
 
 
@@ -387,17 +512,17 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
     float *specs = (float *)calloc(specsCount * 4, sizeof(float));
     char temp[1024];
     int index;
-    float sigma_value, eps_s_value, eps_i_value, tau_d_value;
+    float sigmaValue, epsSValue, epsIValue, tauDValue;
 
     FILE *specsFile = fopen(specsFilePath, "r");
     //check(specsFile != NULL, "Cannot open specs file");
 
     for(int i=0; i<94; i++) {
-        fscanf(specsFile, "%d %s %g %g %g %g", &index, temp, &sigma_value, &eps_s_value, &eps_i_value, &tau_d_value);
-        specs[index*4 + 0] = sigma_value;
-        specs[index*4 + 1] = eps_s_value;
-        specs[index*4 + 2] = eps_i_value;
-        specs[index*4 + 3] = tau_d_value;
+        fscanf(specsFile, "%d %s %g %g %g %g", &index, temp, &sigmaValue, &epsSValue, &epsIValue, &tauDValue);
+        specs[index*4 + 0] = sigmaValue;
+        specs[index*4 + 1] = epsSValue;
+        specs[index*4 + 2] = epsIValue;
+        specs[index*4 + 3] = tauDValue;
     }
 
     fclose(specsFile);
@@ -420,9 +545,9 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
 
                 int offset = iz*params->nx*params->ny + iy*params->nx + ix;
                 field->sigma[offset] = specs[code*4 + 0];
-                field->eps_s[offset] = specs[code*4 + 1];
-                field->eps_i[offset] = specs[code*4 + 2];
-                field->tau_d[offset] = specs[code*4 + 3];
+                field->epsS[offset] = specs[code*4 + 1];
+                field->epsI[offset] = specs[code*4 + 2];
+                field->tauD[offset] = specs[code*4 + 3];
             }
         }
 
@@ -441,13 +566,13 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
             for(int ix = 0; ix < 2; ix++) {
                 int offset = iz * params->nx * params->ny + iy * params->nx + ix;
 
-                field->rp_x_0[offset] = 0.0; 
+                field->rpx0[offset] = 0.0; 
             }
 
             for(int ix = params->nx - 2; ix < params->nx; ix++) {
                 int offset = iz * params->nx * params->ny + iy * params->nx + ix;
 
-                field->rp_x_end[offset] = 0.0;
+                field->rpxEnd[offset] = 0.0;
             }
         }
     }
@@ -458,13 +583,13 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
             for(int iy = 0; iy < 2; iy++) {
                 int offset = iz * params->nx * params->ny + iy * params->nx + ix;
 
-                field->rp_y_0[offset] = 0.0; 
+                field->rpy0[offset] = 0.0; 
             }
 
             for(int iy = params->ny - 2; iy < params->ny; iy++) {
                 int offset = iz * params->nx * params->ny + iy * params->nx + ix;
 
-                field->rp_y_end[offset] = 0.0;
+                field->rpyEnd[offset] = 0.0;
             }
         }
     }
@@ -475,13 +600,13 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
             for(int iz = 0; iz < 2; iz++) {
                 int offset = iz * params->nx * params->ny + iy * params->nx + ix;
 
-                field->rp_z_0[offset] = 0.0; 
+                field->rpz0[offset] = 0.0; 
             }
 
             for(int iz = params->nz - 2; iz < params->nz; iz++) {
                 int offset = iz * params->nx * params->ny + iy * params->nx + ix;
 
-                field->rp_z_end[offset] = 0.0;
+                field->rpzEnd[offset] = 0.0;
             }
         }
     }

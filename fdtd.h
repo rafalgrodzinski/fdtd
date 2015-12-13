@@ -1,42 +1,54 @@
 #ifndef FDTD_H
 #define FDTD_H
 
+#include <cuda_runtime_api.h>
+
 typedef struct
 {
-    int nx, ny, nz;
-    int iterationsCount;
-    char *inputPath;
-    char *outputPath;
-    int  elementsPerWave;
+    int   nx, ny, nz;
+    int   iterationsCount;
+    char  *inputPath;
+    char  *outputPath;
+    int   elementsPerWave;
     float waveFrequency;
     float pulseWidth;
     float pulseModulationFrequency;
     int   sourcesCount;
     int   *sources;
     float sigma;
-    float eps_s;
-    float eps_i;
-    float tau_d;
+    float epsS;
+    float epsI;
+    float tauD;
+    float *jz;
+
+    float pi; // Delicious pie
+    float c; // Light speed (v in m/s)
+    float timeskip; // Time step skip
+    float lambda; // Wave length (meters)
+    float dt; // Length of the time step
+    float dx, dy, dz; // Distance between 2 cells
+    float mu0; // Permeability of free space (in henry/meter)
+    float eps0; // Permittivity of free space (in farad/meter)
 } FdtdParams;
 
 
 typedef struct
 {
+    float *ex0, *ey0, *ez0;
     float *ex1, *ey1, *ez1;
     float *ex2, *ey2, *ez2;
-    float *ex3, *ey3, *ez3;
 
     float *hx, *hy, *hz;
 
+    float *dx0, *dy0, *dz0;
     float *dx1, *dy1, *dz1;
     float *dx2, *dy2, *dz2;
-    float *dx3, *dy3, *dz3;
 
-    float *eps_i, *eps_s;
-    float *tau_d, *sigma;
+    float *epsI, *epsS;
+    float *tauD, *sigma;
 
-    float *rp_x_0,   *rp_y_0,   *rp_z_0;
-    float *rp_x_end, *rp_y_end, *rp_z_end;
+    float *rpx0,   *rpy0,   *rpz0;
+    float *rpxEnd, *rpyEnd, *rpzEnd;
 } FdtdField;
 
 
