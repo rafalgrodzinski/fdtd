@@ -581,56 +581,74 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
 
 void setupMurBoundary(FdtdParams *params, FdtdField *field)
 {
-    // Setup rp_x
-    for(int iz = 0; iz < params->nz; iz++) {
-        for(int iy = 0; iy < params->ny; iy++) {
+#ifndef __APPLE__
+    int nx = params->nx;
+    int ny = params->ny;
+    int nz = params->nz;
+
+    // Setup rpx
+    for(int iz = 0; iz < nz; iz++) {
+        for(int iy = 0; iy < ny; iy++) {
             for(int ix = 0; ix < 2; ix++) {
-                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
+                float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy,iz);
+                float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0);
 
-                field->rpx0[offset] = 0.0; 
+                OFFSET(field->rpx0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +
+                                                        (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
 
-            for(int ix = params->nx - 2; ix < params->nx; ix++) {
-                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
-
-                field->rpxEnd[offset] = 0.0;
+            for(int ix = nx - 2; ix < nx; ix++) {
+                float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz);
+                float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0);
+                
+                OFFSET(field->rpxEnd, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
+                                                          (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
         }
     }
 
-    // Setup rp_y
-    for(int iz = 0; iz < params->nz; iz++) {
-        for(int ix = 0; ix < params->nx; ix++) {
+    // Setup rpy
+    for(int iz = 0; iz < nz; iz++) {
+        for(int ix = 0; ix < nx; ix++) {
             for(int iy = 0; iy < 2; iy++) {
-                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
-
-                field->rpy0[offset] = 0.0; 
+                float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
+                float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) /(2.0 * params->pi * params->waveFrequency * params->eps0) * I;
+                
+                OFFSET(field->rpy0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                      
+                                                        (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
 
-            for(int iy = params->ny - 2; iy < params->ny; iy++) {
-                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
-
-                field->rpyEnd[offset] = 0.0;
+            for(int iy = ny - 2; iy < ny; iy++) {
+                float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
+                float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2 * params->pi * params->waveFrequency * params->eps0) * I;
+                
+                OFFSET(field->rpyEnd, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                      
+                                                          (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
         }
     }
 
-    // Setup rp_z
-    for(int iy = 0; iy < params->ny; iy++) {
-        for(int ix = 0; ix < params->nx; ix++) {
+    // Setup rpz
+    for(int iy = 0; iy < ny; iy++) {
+        for(int ix = 0; ix < nx; ix++) {
             for(int iz = 0; iz < 2; iz++) {
-                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
-
-                field->rpz0[offset] = 0.0; 
+                float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
+                float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0) * I;
+                
+                OFFSET(field->rpz0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
+                                                        (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
 
-            for(int iz = params->nz - 2; iz < params->nz; iz++) {
-                int offset = iz * params->nx * params->ny + iy * params->nx + ix;
-
-                field->rpzEnd[offset] = 0.0;
+            for(int iz = nz - 2; iz < nz; iz++) {
+                float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
+                float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0) * I;
+                
+                OFFSET(field->rpzEnd, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
+                                                          (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
         }
     }
+#endif
 }
 
 
