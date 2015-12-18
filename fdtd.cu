@@ -221,6 +221,7 @@ FdtdParams *initParamsWithPath(const char *filePath)
     fscanf(paramsFile, "%s %d %d %d\n", temp, &params->nx, &params->ny, &params->nz);
     //t_max (simulation runs count)
     fscanf(paramsFile, "%s %d\n", temp, &params->iterationsCount);
+    params->iterationsCount = ((params->iterationsCount - 1)/3 + 1) * 3; // Has to be divisible by 3
     //unused (nf)
     fgets(temp, tempLength, paramsFile);
     //env_set_dir (input path)
@@ -277,6 +278,18 @@ FdtdParams *initParamsWithPath(const char *filePath)
     fscanf(paramsFile, "%s %f\n", temp, &params->tauD);
     
     fclose(paramsFile);
+
+    // Generate rest of the values
+    params->pi = acos(-1.0);
+    params->c = 3.0 * pow(10.0, 8.0);
+    params->timeskip = 1.0;
+    params->lambda = params->c / params->waveFrequency;
+    params->dx = params->lambda / params->elementsPerWave;
+    params->dy = params->dx;
+    params->dz = params->dx;
+    params->dt = 1.0 * params->timeskip / (params->c * sqrt(1.0/pow(params->dx, 2.0) + 1.0/pow(params->dy, 2.0) + 1.0/pow(params->dz, 2.0)));
+    params->mu0 = 4.0 * params->pi * pow(10.0, -7.0);
+    params->eps0 = 1.0 / params->mu0 * (params->c * params->c);
 
     return params;
 }
