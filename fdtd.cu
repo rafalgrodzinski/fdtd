@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -654,6 +655,59 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
 
 void setupSources(FdtdParams *params, FdtdField *field)
 {
+    int fine;
+    int temp;
+    int i2;
+    int istart;
+    float *tmpdata, *tmpdata2;
+
+    int tmpOff = 1<<16;
+    params->jz = (float *)calloc(tmpOff, sizeof(float));
+    tmpdata = (float *)calloc(tmpOff * 2, sizeof(float));
+    tmpdata2 = (float *)calloc(tmpOff * 2, sizeof(float));
+    
+    // fine & temp
+    fine = (1<<13) * params->pulseWidth * params->waveFrequency * params->dt;
+
+    temp = 1.0/(params->pulseWidth * params->waveFrequency)/(params->dt / fine)/2.0;
+    
+    // tmpdata
+    for(int i = -temp - 1; i <= temp + 1; i++) {
+        float value = exp(pow(-((float)i/(((float)temp + 1.0)/4.0)), 2.0));
+        value *= cos(2.0 * acos(-1.0) * params->pulseModulationFrequency * params->waveFrequency * i * (params->dt / fine));
+        tmpdata[i + tmpOff] = value; 
+    }
+
+    // istart
+    int off = 1<<12;
+    for(int i = -off; i < off; i++) {
+         if((fabs(tmpdata[i + tmpOff]) >= pow(1.0, -9.0)) && (i % fine == 0)) {
+            istart = i;
+            break;
+         }
+    }
+    
+    // setup jz 1/2
+    i2 = 0;
+    for(int i=istart; i <= temp+1; i++) {
+          params->jz[i2] = tmpdata[i] * pow(10.0, -15.0) / params->dt / 3.0;
+          i2++;
+    }
+    
+    //setup tmpdata2
+    for(int i=2; i <= (1<<14); i++) {
+        tmpdata2[i - 1 + tmpOff] = (((params->jz[i + 1 - 1] - params->jz[i - 1]) / params->dt) +
+                                    ((params->jz[i - 1] - params->jz[i - 1 - 1]) / params->dt)) / 
+                                    2.0 * (params->dt * params->dz) / (params->dx * params->dy * params->dz);
+    }
+    
+    // Setup jz 2/2
+    for(int i=0; i < (2 << 14); i++) {
+        params->jz[i] = tmpdata2[i + 1];
+    }
+
+    free(tmpdata2);
+    free(tmpdata);
 }
 
 
