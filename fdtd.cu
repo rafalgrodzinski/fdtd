@@ -37,6 +37,9 @@ int main(int argc, char **argv)
     printf("Initializing sources...\n");
     setupSources(params, field);
 
+    printf("Copying data to GPU...\n");
+    copyData(params, field, deviceField);
+
     // Setup CUDA parameters
     dim3 gridSize = dim3((params->nx + BLOCK_X - 1)/BLOCK_X,
                          (params->ny + BLOCK_Y - 1)/BLOCK_Y,
@@ -735,6 +738,56 @@ void setupSources(FdtdParams *params, FdtdField *field)
 
     free(tmpdata2);
     free(tmpdata);
+}
+
+
+void copyData(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
+{
+    int n = params->nx * params->ny * params->nz * sizeof(float); 
+
+    //e
+    cudaMemcpy(deviceField->ex0, field->ex0, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->ey0, field->ey0, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->ez0, field->ez0, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->ex1, field->ex1, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->ey1, field->ey1, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->ez1, field->ez1, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->ex2, field->ex2, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->ey2, field->ey2, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->ez2, field->ez2, n, cudaMemcpyHostToDevice);
+
+    //h
+    cudaMemcpy(deviceField->hx, field->hx, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->hy, field->hy, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->hz, field->hz, n, cudaMemcpyHostToDevice);
+
+    //d
+    cudaMemcpy(deviceField->dx0, field->dx0, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->dy0, field->dy0, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->dz0, field->dz0, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->dx1, field->dx1, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->dy1, field->dy1, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->dz1, field->dz1, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->dx2, field->dx2, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->dy2, field->dy2, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->dz2, field->dz2, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->epsI, field->epsI, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->epsS, field->epsS, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->tauD, field->tauD, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->sigma, field->sigma, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->rpx0, field->rpx0, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->rpy0, field->rpy0, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->rpz0, field->rpz0, n, cudaMemcpyHostToDevice);
+
+    cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, n, cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, n, cudaMemcpyHostToDevice);
 }
 
 

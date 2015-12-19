@@ -65,6 +65,7 @@ void deallocDeviceField(FdtdField *);
 void setupMurBoundary(FdtdParams *params, FdtdField *field);
 void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
 void setupSources(FdtdParams *params, FdtdField *field);
+void copyData(FdtdParams *params, FdtdField *field, FdtdField *deviceField);
 void writeResults(FdtdParams *params, FdtdField *field,
                   float *exSource, float *eySource, float *ezSource,
                   float *dxSource, float *dySource, float *dzSource,
