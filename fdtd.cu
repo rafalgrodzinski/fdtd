@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <complex.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -545,11 +546,19 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
     // Load material specs
     int specsCount = 94;
     float *specs = (float *)calloc(specsCount * 4, sizeof(float));
+    if(specs == NULL) {
+        printf("Couldn't alocate %d bytes for specs\n", specsCount*4*sizeof(float));
+        exit(EXIT_FAILURE);
+    }
     char temp[1024];
     int index;
     float sigmaValue, epsSValue, epsIValue, tauDValue;
 
     FILE *specsFile = fopen(specsFilePath, "r");
+    if(specsFile == NULL) {
+        printf("Couldn\'t open file %s\n", specsFilePath);
+        exit(EXIT_FAILURE);
+    }
     //check(specsFile != NULL, "Cannot open specs file");
 
     for(int i=0; i<94; i++) {
@@ -567,6 +576,11 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
         char materialFileName[1024];
         sprintf(materialFileName, "%s/v1_%5d.pgm", materialsPath, iz);
         FILE *materialFile = fopen(materialFileName, "r");
+
+        if(materialFile == NULL) {
+            printf("Couldn\'t open file %s\n", materialFileName);
+            exit(EXIT_FAILURE);
+        }
 
         printf("Reading %s...", materialFileName);
 
