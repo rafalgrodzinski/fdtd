@@ -66,6 +66,12 @@ implicit none
     call setup_source(params, field)
     print *, ""
 
+    do i=1, params%nsrc
+        print *, "jz", i, params%jz(i)
+    end do
+    
+    exit
+
     !Initialize CUDA
     if(is_cuda) then
         print *, "Initializing GPU parameters..."

@@ -38,6 +38,11 @@ int main(int argc, char **argv)
     printf("Initializing sources...\n");
     setupSources(params, field);
 
+    for(int i=0; i<params->iterationsCount; i++)
+        printf("jz %2d: %g\n", i, params->jz[i]);
+
+    exit(0);
+
     printf("Copying data to GPU...\n");
     copyData(params, field, deviceField);
 
