@@ -1,7 +1,7 @@
 nx_ny_nz: 100 100 100 
 t_max: 10
 nf: 1
-env_set_dir: "data/pgmdata/"
+env_set_dir: data/pgmdata
 env_file_prefix: "ver"
 output_dir: "output/"
 output_format: "txt"
