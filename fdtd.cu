@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     printf("Initializing field...\n");
     field = initFieldWithParams(params);
     setupMurBoundary(params, field);
+
     printf("Initializing device field...\n");
     deviceField = initDeviceFieldWithParams(params);
 
@@ -46,7 +47,7 @@ int main(int argc, char **argv)
     // Main loop
     for(int i=0; i<params->iterationsCount; i += 3) {
         // Run 0
-        printf("Running iteration %d", i);
+        printf("Running iteration %d\n", i);
 
         updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                               deviceField->ex2, deviceField->ey2, deviceField->ez2,                 
@@ -62,13 +63,13 @@ int main(int argc, char **argv)
                                               params->dt, params->dx, params->dy, params->dz);
         CHECK(cudaDeviceSynchronize())
  
-        updateSources<<<gridSize, blockSize>>>(deviceField->dz0, deviceField->dz2,                                 
+        /*updateSources<<<gridSize, blockSize>>>(deviceField->dz0, deviceField->dz2,                                 
                                                deviceField->hx,  deviceField->hy,                                   
                                                params->nx, params->ny, params->nz,
                                                params->dt, params->dx, params->dy, params->dz, 
                                                params->sources, params->jz,                                
                                                params->sourcesCount, i);
-        CHECK(cudaDeviceSynchronize())
+        CHECK(cudaDeviceSynchronize())*/
             
         updateEField<<<gridSize, blockSize>>>(deviceField->ex0, deviceField->ey0, deviceField->ez0, 
                                               deviceField->ex2, deviceField->ey2, deviceField->ez2, 
@@ -97,7 +98,7 @@ int main(int argc, char **argv)
                      i, params->outputPath);
 
         // Run 1
-        printf("Running iteration %d", i+1);
+        printf("Running iteration %d\n", i+1);
 
         updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                               deviceField->ex0, deviceField->ey0, deviceField->ez0,                 
@@ -113,13 +114,13 @@ int main(int argc, char **argv)
                                               params->dt, params->dx, params->dy, params->dz);
         CHECK(cudaDeviceSynchronize())
  
-        updateSources<<<gridSize, blockSize>>>(deviceField->dz1, deviceField->dz0,                                 
+        /*updateSources<<<gridSize, blockSize>>>(deviceField->dz1, deviceField->dz0,                                 
                                                deviceField->hx,  deviceField->hy,                                   
                                                params->nx, params->ny, params->nz,
                                                params->dt, params->dx, params->dy, params->dz, 
                                                params->sources, params->jz,                                
                                                params->sourcesCount, i);
-        CHECK(cudaDeviceSynchronize())
+        CHECK(cudaDeviceSynchronize())*/
             
         updateEField<<<gridSize, blockSize>>>(deviceField->ex1, deviceField->ey1, deviceField->ez1, 
                                               deviceField->ex0, deviceField->ey0, deviceField->ez0, 
@@ -148,7 +149,7 @@ int main(int argc, char **argv)
                      i+1, params->outputPath);
 
         // Run 2
-        printf("Running iteration %d", i+2);
+        printf("Running iteration %d\n", i+2);
 
         updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                               deviceField->ex1, deviceField->ey1, deviceField->ez1,                 
@@ -164,13 +165,13 @@ int main(int argc, char **argv)
                                               params->dt, params->dx, params->dy, params->dz);
         CHECK(cudaDeviceSynchronize())
  
-        updateSources<<<gridSize, blockSize>>>(deviceField->dz2, deviceField->dz1,                                 
+        /*updateSources<<<gridSize, blockSize>>>(deviceField->dz2, deviceField->dz1,                                 
                                                deviceField->hx,  deviceField->hy,                                   
                                                params->nx, params->ny, params->nz,
                                                params->dt, params->dx, params->dy, params->dz, 
                                                params->sources, params->jz,                                
                                                params->sourcesCount, i);
-        CHECK(cudaDeviceSynchronize())
+        CHECK(cudaDeviceSynchronize())*/
             
         updateEField<<<gridSize, blockSize>>>(deviceField->ex2, deviceField->ey2, deviceField->ez2, 
                                               deviceField->ex1, deviceField->ey1, deviceField->ez1, 
@@ -200,9 +201,9 @@ int main(int argc, char **argv)
     }
 
     // Clean up
-    deallocDeviceField(deviceField);
+    /*deallocDeviceField(deviceField);
     deallocField(field);
-    deallocParams(params);
+    deallocParams(params);*/
 }
 
 
@@ -332,6 +333,10 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     int n = params->nx * params->ny * params->nz * sizeof(float); 
 
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
+    if(field == NULL) {
+        printf("Couldn't allocate field\n");
+        exit(EXIT_FAILURE);
+    }
 
     // e
     CHECK(cudaHostAlloc(&field->ex0, n, cudaHostAllocDefault))
@@ -559,30 +564,34 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
         printf("Couldn\'t open file %s\n", specsFilePath);
         exit(EXIT_FAILURE);
     }
-    //check(specsFile != NULL, "Cannot open specs file");
 
-    for(int i=0; i<94; i++) {
-        fscanf(specsFile, "%d %s %g %g %g %g", &index, temp, &sigmaValue, &epsSValue, &epsIValue, &tauDValue);
+    for(int i=0; i<specsCount; i++) {
+        fscanf(specsFile, "%d %s %g %g %g %g\n", &index, temp, &sigmaValue, &epsSValue, &epsIValue, &tauDValue);
+        //printf("Read %s @ %d: %g %g %g %g\n", temp, index, sigmaValue, epsSValue, epsIValue, tauDValue);
+
         specs[index*4 + 0] = sigmaValue;
         specs[index*4 + 1] = epsSValue;
         specs[index*4 + 2] = epsIValue;
         specs[index*4 + 3] = tauDValue;
+
+        if(index >= specsCount)
+            break;
     }
 
-    fclose(specsFile);
+    //fclose(specsFile);
 
     // Load materials
     for(int iz=0; iz<params->nz; iz++) {
         char materialFileName[1024];
-        sprintf(materialFileName, "%s/v1_%5d.pgm", materialsPath, iz);
+        sprintf(materialFileName, "%s/v1_%05d.pgm", materialsPath, iz+1);
         FILE *materialFile = fopen(materialFileName, "r");
-
+        
         if(materialFile == NULL) {
             printf("Couldn\'t open file %s\n", materialFileName);
             exit(EXIT_FAILURE);
         }
 
-        printf("Reading %s...", materialFileName);
+        //printf("Reading %s...\n", materialFileName);
 
         int width, height;
         fscanf(materialFile, "%s %s %s %d %d %s", temp, temp, temp, &width, &height, temp);
@@ -594,16 +603,16 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
 
                 int offset = iz*params->nx*params->ny + iy*params->nx + ix;
                 field->sigma[offset] = specs[code*4 + 0];
-                field->epsS[offset] = specs[code*4 + 1];
-                field->epsI[offset] = specs[code*4 + 2];
-                field->tauD[offset] = specs[code*4 + 3];
+                field->epsS[offset] =  specs[code*4 + 1];
+                field->epsI[offset] =  specs[code*4 + 2];
+                field->tauD[offset] =  specs[code*4 + 3];
             }
         }
 
-        fclose(materialFile);
+        //fclose(materialFile);
     }
 
-    free(specs);
+    //free(specs);
 }
 
 
@@ -751,7 +760,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     int ny = params->ny;
 
     // Output x
-    sprintf(outputPath, "%s/E_field_x_%5d.out", outputPath, currentIteration);
+    sprintf(outputPath, "%s/E_field_x_%05d.out", outputPath, currentIteration);
 
     outputFile = fopen(outputFilePath, "w");
     for(int isrc=0; isrc < params->sourcesCount; isrc++) {
@@ -767,7 +776,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output y
-    sprintf(outputPath, "%s/E_field_y_%5d.out", outputPath, currentIteration);
+    sprintf(outputPath, "%s/E_field_y_%05d.out", outputPath, currentIteration);
 
     outputFile = fopen(outputFilePath, "w");
     for(int isrc=0; isrc < params->sourcesCount; isrc++) {
@@ -783,7 +792,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output z
-    sprintf(outputPath, "%s/E_field_z_%5d.out", outputPath, currentIteration);
+    sprintf(outputPath, "%s/E_field_z_%05d.out", outputPath, currentIteration);
 
     outputFile = fopen(outputFilePath, "w");
     for(int isrc=0; isrc < params->sourcesCount; isrc++) {
