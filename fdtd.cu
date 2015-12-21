@@ -36,12 +36,7 @@ int main(int argc, char **argv)
     loadMaterials(params, field, "data/mat_specs_riken", params->inputPath);
 
     printf("Initializing sources...\n");
-    setupSources(params, field);
-
-    for(int i=0; i<params->iterationsCount; i++)
-        printf("jz %2d: %g\n", i, params->jz[i]);
-
-    exit(0);
+    setupSources(params);
 
     printf("Copying data to GPU...\n");
     copyData(params, field, deviceField);
@@ -560,7 +555,7 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
     int specsCount = 94;
     float *specs = (float *)calloc(specsCount * 4, sizeof(float));
     if(specs == NULL) {
-        printf("Couldn't alocate %d bytes for specs\n", specsCount*4*sizeof(float));
+        printf("Couldn't alocate %ld bytes for specs\n", (long)specsCount*4*sizeof(float));
         exit(EXIT_FAILURE);
     }
     char temp[1024];
@@ -697,57 +692,55 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
 }
 
 
-void setupSources(FdtdParams *params, FdtdField *field)
+void setupSources(FdtdParams *params)
 {
-    int fine;
-    int temp;
-    int i2;
-    int istart;
+    int fine, temp, i2, istart;
     float *tmpdata, *tmpdata2;
-
     int tmpOff = 1<<16;
-    params->jz = (float *)calloc(tmpOff, sizeof(float));
-    tmpdata = (float *)calloc(tmpOff * 2, sizeof(float));
-    tmpdata2 = (float *)calloc(tmpOff * 2, sizeof(float));
-    
-    // fine & temp
-    fine = (1<<13) * params->pulseWidth * params->waveFrequency * params->dt;
 
+    params->jz = (float *)calloc(tmpOff,     sizeof(float));
+    tmpdata    = (float *)calloc(tmpOff * 2, sizeof(float));
+    tmpdata2   = (float *)calloc(tmpOff * 2, sizeof(float));
+    
+    //fine & temp
+    fine = (1<<13) * params->pulseWidth * params->waveFrequency * params->dt;
     temp = 1.0/(params->pulseWidth * params->waveFrequency)/(params->dt / fine)/2.0;
     
-    // tmpdata
+    //tmpdata
     for(int i = -temp - 1; i <= temp + 1; i++) {
-        float value = exp(pow(-((float)i/(((float)temp + 1.0)/4.0)), 2.0));
-        value *= cos(2.0 * acos(-1.0) * params->pulseModulationFrequency * params->waveFrequency * i * (params->dt / fine));
-        tmpdata[i + tmpOff] = value; 
+        float v1 = ((float)i/(((float)temp + 1.0)/4.0));
+        float v2 = exp(-pow(v1, 2.0));
+        float v3 = cos(2.0 * acos(-1.0) * params->pulseModulationFrequency * params->waveFrequency * i * (params->dt / fine));
+        tmpdata[i + tmpOff] = v2 * v3;
     }
 
-    // istart
-    int off = 1<<12;
-    for(int i = -off; i < off; i++) {
-         if((fabs(tmpdata[i + tmpOff]) >= pow(1.0, -9.0)) && (i % fine == 0)) {
+    //istart
+    for(int i = -(1<<12); i < (1<<12); i++) {
+         if((fabs(tmpdata[i + tmpOff]) >= 1e-9) && (i % fine == 0)) {
             istart = i;
             break;
          }
     }
     
-    // setup jz 1/2
+    //setup jz 1/2
     i2 = 0;
-    for(int i=istart; i <= temp+1; i++) {
-          params->jz[i2] = tmpdata[i] * pow(10.0, -15.0) / params->dt / 3.0;
-          i2++;
+    for(int i = istart; i <= temp+1; i += fine) {
+        params->jz[i2] = tmpdata[i + tmpOff] * 1e-15 / (params->dt / 3.0);
+        i2++;
     }
     
     //setup tmpdata2
-    for(int i=2; i <= (1<<14); i++) {
-        tmpdata2[i - 1 + tmpOff] = (((params->jz[i + 1 - 1] - params->jz[i - 1]) / params->dt) +
-                                    ((params->jz[i - 1] - params->jz[i - 1 - 1]) / params->dt)) / 
-                                    2.0 * (params->dt * params->dz) / (params->dx * params->dy * params->dz);
+    for(int i = 2; i <= (1<<14); i++) {
+        float val = (((params->jz[i + 1 - 1] - params->jz[i - 1]) / params->dt) +
+                    ((params->jz[i - 1] - params->jz[i - 1 - 1]) / params->dt)) / 
+                    2.0 * (params->dt * params->dz) / (params->dx * params->dy * params->dz);
+                                    
+        tmpdata2[i - 1 + tmpOff] = val;
     }
     
-    // Setup jz 2/2
-    for(int i=0; i < (2 << 14); i++) {
-        params->jz[i] = tmpdata2[i + 1];
+    //setup jz 2/2
+    for(int i=0; i < 1<<14; i++) {
+        params->jz[i] = tmpdata2[i + tmpOff + 1];
     }
 
     free(tmpdata2);
