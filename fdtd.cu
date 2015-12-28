@@ -843,7 +843,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int iy = params->sources[isrc * 3 + 1];
         int iz = params->sources[isrc * 3 + 2];
         for(int ix=0; ix < params->nx; ix++) {
-            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g", ix, iy, iz,
+            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g\n", ix, iy, iz,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
@@ -864,7 +864,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int ix = params->sources[isrc * 3 + 0];
         int iz = params->sources[isrc * 3 + 2];
         for(int iy=0; iy < params->ny; iy++) {
-            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g", ix, iy, iz,
+            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g\n", ix, iy, iz,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
@@ -885,7 +885,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int ix = params->sources[isrc * 3 + 0];
         int iy = params->sources[isrc * 3 + 1];
         for(int iz=0; iz < params->nz; iz++) {
-            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g", ix, iy, iz,
+            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g\n", ix, iy, iz,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
