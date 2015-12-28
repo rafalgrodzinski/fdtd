@@ -818,9 +818,14 @@ void writeResults(FdtdParams *params, FdtdField *field,
     int ny = params->ny;
 
     // Output x
-    sprintf(outputPath, "%s/E_field_x_%05d.out", outputPath, currentIteration);
+    sprintf(outputFilePath, "%s/E_field_x_%05d.out", outputPath, currentIteration);
 
     outputFile = fopen(outputFilePath, "w");
+    if(outputFile == NULL) {
+        printf("Couldn\'t open file %s\n", outputFilePath);
+        exit(EXIT_FAILURE);
+    }
+
     for(int isrc=0; isrc < params->sourcesCount; isrc++) {
         int iy = params->sources[isrc * 3 + 1];
         int iz = params->sources[isrc * 3 + 2];
@@ -834,9 +839,14 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output y
-    sprintf(outputPath, "%s/E_field_y_%05d.out", outputPath, currentIteration);
+    sprintf(outputFilePath, "%s/E_field_y_%05d.out", outputPath, currentIteration);
 
     outputFile = fopen(outputFilePath, "w");
+    if(outputFile == NULL) {
+        printf("Couldn\'t open file %s\n", outputFilePath);
+        exit(EXIT_FAILURE);
+    }
+
     for(int isrc=0; isrc < params->sourcesCount; isrc++) {
         int ix = params->sources[isrc * 3 + 0];
         int iz = params->sources[isrc * 3 + 2];
@@ -850,9 +860,14 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output z
-    sprintf(outputPath, "%s/E_field_z_%05d.out", outputPath, currentIteration);
+    sprintf(outputFilePath, "%s/E_field_z_%05d.out", outputPath, currentIteration);
 
     outputFile = fopen(outputFilePath, "w");
+    if(outputFile == NULL) {
+        printf("Couldn\'t open file %s\n", outputFilePath);
+        exit(EXIT_FAILURE);
+    }
+
     for(int isrc=0; isrc < params->sourcesCount; isrc++) {
         int ix = params->sources[isrc * 3 + 0];
         int iy = params->sources[isrc * 3 + 1];
