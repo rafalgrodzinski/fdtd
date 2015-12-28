@@ -274,13 +274,13 @@ FdtdParams *initParamsWithPath(const char *filePath)
     //unused (pulse_type)
     fgets(temp, tempLength, paramsFile);
     //fsigma (sigma)
-    fscanf(paramsFile, "%s %f\n", temp, &params->sigma);
+    fscanf(paramsFile, "%s %f\n", temp, &params->defaultSigma);
     //feps_s (eps_s)
-    fscanf(paramsFile, "%s %f\n", temp, &params->epsS);
+    fscanf(paramsFile, "%s %f\n", temp, &params->defaultEpsS);
     //feps_inf (eps_i)
-    fscanf(paramsFile, "%s %f\n", temp, &params->epsI);
+    fscanf(paramsFile, "%s %f\n", temp, &params->defaultEpsI);
     //ftau_d (tau_d)
-    fscanf(paramsFile, "%s %f\n", temp, &params->tauD);
+    fscanf(paramsFile, "%s %f\n", temp, &params->defaultTauD);
     
     fclose(paramsFile);
 
@@ -323,17 +323,17 @@ void printParams(FdtdParams *params)
         printf("Source position:            %dx%dx%d\n", params->sources[i*3],
                                                          params->sources[i*3 + 1],
                                                          params->sources[i*3 + 2]);
-    printf("Default sigma:              %g\n", params->sigma);
-    printf("Default eps_s:              %g\n", params->epsS);
-    printf("Default eps_i:              %g\n", params->epsI);
-    printf("Default tau_d:              %g\n", params->tauD);
+    printf("Default sigma:              %g\n", params->defaultSigma);
+    printf("Default eps_s:              %g\n", params->defaultEpsS);
+    printf("Default eps_i:              %g\n", params->defaultEpsI);
+    printf("Default tau_d:              %g\n", params->defaultTauD);
     printf("\n");
 }
 
 
 FdtdField *initFieldWithParams(FdtdParams *params)
 {
-    int n = params->nx * params->ny * params->nz * sizeof(float); 
+    int n = params->nx * params->ny * params->nz; 
 
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
     if(field == NULL) {
@@ -342,50 +342,57 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     }
 
     // e
-    CHECK(cudaHostAlloc(&field->ex0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ex0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez0, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->ex1, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey1, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez1, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ex1, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey1, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez1, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->ex2, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey2, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez2, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ex2, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey2, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez2, n * sizeof(float), cudaHostAllocDefault))
 
     // h
-    CHECK(cudaHostAlloc(&field->hx, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->hy, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->hz, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->hx, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->hy, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->hz, n * sizeof(float), cudaHostAllocDefault))
 
     // d
-    CHECK(cudaHostAlloc(&field->dx0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dy0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dz0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dx0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz0, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->dx1, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dy1, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dz1, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dx1, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy1, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz1, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->dx2, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dy2, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dz2, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dx2, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dy2, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->dz2, n * sizeof(float), cudaHostAllocDefault))
 
     // sigma, eps, tau
-    CHECK(cudaHostAlloc(&field->sigma, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->epsS, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->epsI, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->tauD, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->sigma, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->epsS,  n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->epsI,  n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->tauD,  n * sizeof(float), cudaHostAllocDefault))
+
+    for(int i = 0; i < n; i++) {
+        field->sigma[i] = params->defaultSigma;
+        field->epsS[i]  = params->defaultEpsS;
+        field->epsI[i]  = params->defaultEpsI;
+        field->tauD[i]  = params->defaultTauD;
+    }
 
     // rp
-    CHECK(cudaHostAlloc(&field->rpx0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpy0, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpz0, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpx0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpy0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpz0, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->rpxEnd, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpyEnd, n, cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpzEnd, n, cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpxEnd, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpyEnd, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->rpzEnd, n * sizeof(float), cudaHostAllocDefault))
 
     return field;
 }
@@ -445,55 +452,55 @@ void deallocField(FdtdField *field)
 
 FdtdField *initDeviceFieldWithParams(FdtdParams *params)
 {
-    int n = params->nx * params->ny * params->nz * sizeof(float); 
+    int n = params->nx * params->ny * params->nz; 
 
     FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
 
     // e
-    CHECK(cudaMalloc(&field->ex0, n))
-    CHECK(cudaMalloc(&field->ey0, n))
-    CHECK(cudaMalloc(&field->ez0, n))
+    CHECK(cudaMalloc(&field->ex0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->ey0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->ez0, n * sizeof(float)))
 
-    CHECK(cudaMalloc(&field->ex1, n))
-    CHECK(cudaMalloc(&field->ey1, n))
-    CHECK(cudaMalloc(&field->ez1, n))
+    CHECK(cudaMalloc(&field->ex1, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->ey1, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->ez1, n * sizeof(float)))
 
-    CHECK(cudaMalloc(&field->ex2, n))
-    CHECK(cudaMalloc(&field->ey2, n))
-    CHECK(cudaMalloc(&field->ez2, n))
+    CHECK(cudaMalloc(&field->ex2, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->ey2, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->ez2, n * sizeof(float)))
 
     // h
-    CHECK(cudaMalloc(&field->hx, n))
-    CHECK(cudaMalloc(&field->hy, n))
-    CHECK(cudaMalloc(&field->hz, n))
+    CHECK(cudaMalloc(&field->hx, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->hy, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->hz, n * sizeof(float)))
 
     // d
-    CHECK(cudaMalloc(&field->dx0, n))
-    CHECK(cudaMalloc(&field->dy0, n))
-    CHECK(cudaMalloc(&field->dz0, n))
+    CHECK(cudaMalloc(&field->dx0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->dy0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->dz0, n * sizeof(float)))
 
-    CHECK(cudaMalloc(&field->dx1, n))
-    CHECK(cudaMalloc(&field->dy1, n))
-    CHECK(cudaMalloc(&field->dz1, n))
+    CHECK(cudaMalloc(&field->dx1, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->dy1, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->dz1, n * sizeof(float)))
 
-    CHECK(cudaMalloc(&field->dx2, n))
-    CHECK(cudaMalloc(&field->dy2, n))
-    CHECK(cudaMalloc(&field->dz2, n))
+    CHECK(cudaMalloc(&field->dx2, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->dy2, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->dz2, n * sizeof(float)))
 
     // sigma, eps, tau
-    CHECK(cudaMalloc(&field->epsI, n))
-    CHECK(cudaMalloc(&field->epsS, n))
-    CHECK(cudaMalloc(&field->tauD, n))
-    CHECK(cudaMalloc(&field->sigma, n))
+    CHECK(cudaMalloc(&field->epsI,  n * sizeof(float)))
+    CHECK(cudaMalloc(&field->epsS,  n * sizeof(float)))
+    CHECK(cudaMalloc(&field->tauD,  n * sizeof(float)))
+    CHECK(cudaMalloc(&field->sigma, n * sizeof(float)))
 
     // rp
-    CHECK(cudaMalloc(&field->rpx0, n))
-    CHECK(cudaMalloc(&field->rpy0, n))
-    CHECK(cudaMalloc(&field->rpz0, n))
+    CHECK(cudaMalloc(&field->rpx0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpy0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpz0, n * sizeof(float)))
 
-    CHECK(cudaMalloc(&field->rpxEnd, n))
-    CHECK(cudaMalloc(&field->rpyEnd, n))
-    CHECK(cudaMalloc(&field->rpzEnd, n))
+    CHECK(cudaMalloc(&field->rpxEnd, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpyEnd, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpzEnd, n * sizeof(float)))
 
     return field;
 }

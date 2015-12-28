@@ -15,10 +15,10 @@ typedef struct
     float pulseModulationFrequency;
     int   sourcesCount;
     int   *sources;
-    float sigma;
-    float epsS;
-    float epsI;
-    float tauD;
+    float defaultSigma;
+    float defaultEpsS;
+    float defaultEpsI;
+    float defaultTauD;
     float *jz;
 
     float pi; // Delicious pie
