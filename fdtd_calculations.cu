@@ -1,5 +1,6 @@
 #include "fdtd_calculations.h"
 
+#include <stdio.h>
 #include "utils.h"
 
 
@@ -62,7 +63,7 @@ __global__ void updateDField(float *dxTarget, float *dyTarget, float *dzTarget,
     if(ix > 0 && ix < nx-1 &&
        iy > 1 && iy < ny-1 &&
        iz > 1 && iz < nz-1) {
-        OFFSET(dxSource, ix, iy, iz) = OFFSET(dxSource, ix, iy, iz) +
+        OFFSET(dxTarget, ix, iy, iz) = OFFSET(dxSource, ix, iy, iz) +
                                        dt/dy * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix, iy-1, iz)) -
                                        dt/dz * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix, iy, iz-1));
     }
@@ -216,12 +217,17 @@ __global__ void updateSources(float *dzTarget, float *dzSource,
             int x = src[i * 3 + 0];
             int y = src[i * 3 + 1];
             int z = src[i * 3 + 2];
-    
-            OFFSET(dzTarget, x, y, z) = OFFSET(dzSource, x, y, z) +
+
+            float val = OFFSET(dzSource, x, y, z) +
                                         dt/dx * (OFFSET(hy, x, y, z) - OFFSET(hy, x-1, y, z)) -
                                         dt/dy * (OFFSET(hx, x, y, z) - OFFSET(hx, x, y-1, z)) -
                                         jz[currIteration];
+
+            printf("%2d %2d %2d, %d, %g\n", x, y, z, i, val);
+    
+            OFFSET(dzTarget, x, y, z) =  val;        
         }
+
     }
 }
 

@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     CHECK(cudaMalloc(&deviceJz, bytesCount))
     CHECK(cudaMemcpy(deviceJz, params->jz, bytesCount, cudaMemcpyHostToDevice))
 
-    bytesCount = params->sourcesCount * sizeof(int);
+    bytesCount = params->sourcesCount * 3 * sizeof(int);
     CHECK(cudaMalloc(&deviceSources, bytesCount))
     CHECK(cudaMemcpy(deviceSources, params->sources, bytesCount, cudaMemcpyHostToDevice))
 
@@ -286,9 +286,12 @@ FdtdParams *initParamsWithPath(const char *filePath)
     params->sources = (int *)malloc(sizeof(int) * params->sourcesCount * 3);
     for(int i=0; i<params->sourcesCount; i++) {
         fscanf(paramsFile, "%s %d %d %d\n", temp,
-                                            &params->sources[i*3],
+                                            &params->sources[i*3 + 0],
                                             &params->sources[i*3 + 1],
                                             &params->sources[i*3 + 2]);
+        params->sources[i*3 + 0] -= 1;
+        params->sources[i*3 + 1] -= 1;
+        params->sources[i*3 + 2] -= 1;
     }
     //unused (pulse_type)
     fgets(temp, tempLength, paramsFile);
@@ -339,9 +342,9 @@ void printParams(FdtdParams *params)
     printf("Pulse modulation frequency: %g\n", params->pulseModulationFrequency);
     printf("Sources count:              %d\n", params->sourcesCount);
     for(int i=0; i<params->sourcesCount; i++)
-        printf("Source position:            %dx%dx%d\n", params->sources[i*3],
-                                                         params->sources[i*3 + 1],
-                                                         params->sources[i*3 + 2]);
+        printf("Source position:            %dx%dx%d\n", params->sources[i*3 + 0] + 1,
+                                                         params->sources[i*3 + 1] + 1,
+                                                         params->sources[i*3 + 2] + 1);
     printf("Default sigma:              %g\n", params->defaultSigma);
     printf("Default eps_s:              %g\n", params->defaultEpsS);
     printf("Default eps_i:              %g\n", params->defaultEpsI);
@@ -874,7 +877,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     int ny = params->ny;
 
     // Output x
-    sprintf(outputFilePath, "%s/E_field_x_%05d.out", outputPath, currentIteration);
+    sprintf(outputFilePath, "%s/E_field_x_%05d.out", outputPath, currentIteration + 1);
 
     outputFile = fopen(outputFilePath, "w");
     if(outputFile == NULL) {
@@ -886,7 +889,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int iy = params->sources[isrc * 3 + 1];
         int iz = params->sources[isrc * 3 + 2];
         for(int ix=0; ix < params->nx; ix++) {
-            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g\n", ix, iy, iz,
+            fprintf(outputFile, " %3d %3d %3d  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e\n", ix+1, iy+1, iz+1,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
@@ -895,7 +898,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output y
-    sprintf(outputFilePath, "%s/E_field_y_%05d.out", outputPath, currentIteration);
+    sprintf(outputFilePath, "%s/E_field_y_%05d.out", outputPath, currentIteration + 1);
 
     outputFile = fopen(outputFilePath, "w");
     if(outputFile == NULL) {
@@ -907,7 +910,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int ix = params->sources[isrc * 3 + 0];
         int iz = params->sources[isrc * 3 + 2];
         for(int iy=0; iy < params->ny; iy++) {
-            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g\n", ix, iy, iz,
+            fprintf(outputFile, " %3d %3d %3d  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e\n", ix+1, iy+1, iz+1,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
@@ -916,7 +919,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output z
-    sprintf(outputFilePath, "%s/E_field_z_%05d.out", outputPath, currentIteration);
+    sprintf(outputFilePath, "%s/E_field_z_%05d.out", outputPath, currentIteration + 1);
 
     outputFile = fopen(outputFilePath, "w");
     if(outputFile == NULL) {
@@ -928,7 +931,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int ix = params->sources[isrc * 3 + 0];
         int iy = params->sources[isrc * 3 + 1];
         for(int iz=0; iz < params->nz; iz++) {
-            fprintf(outputFile, "%4d %4d %4d %g %g %g %g %g %g %g %g %g\n", ix, iy, iz,
+            fprintf(outputFile, " %3d %3d %3d  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e\n", ix+1, iy+1, iz+1,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
