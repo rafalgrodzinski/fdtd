@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     setupSources(params);
 
     printf("Copying data to GPU...\n");
-    copyData(params, field, deviceField);
+    copyDataToDevice(params, field, deviceField);
 
     // Copy array params to device
     float *deviceJz;
@@ -107,6 +107,8 @@ int main(int argc, char **argv)
                                                    params->mu0, params->eps0);
         CHECK(cudaDeviceSynchronize());
 
+        copyDataToHost(params, field, deviceField);
+
         // Write results
         writeResults(params, field,
                      field->ex0, field->ey0, field->ez0,
@@ -158,6 +160,8 @@ int main(int argc, char **argv)
                                                    params->mu0, params->eps0);
         CHECK(cudaDeviceSynchronize())
 
+        copyDataToHost(params, field, deviceField);
+
         // Write results
         writeResults(params, field,
                      field->ex1, field->ey1, field->ez1,
@@ -208,6 +212,8 @@ int main(int argc, char **argv)
                                                    params->dt, params->dx, params->dy, params->dz, 
                                                    params->mu0, params->eps0);
         CHECK(cudaDeviceSynchronize())
+
+        copyDataToHost(params, field, deviceField);
 
         // Write results
         writeResults(params, field,
@@ -768,7 +774,7 @@ void setupSources(FdtdParams *params)
 }
 
 
-void copyData(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
+void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
 {
     int n = params->nx * params->ny * params->nz * sizeof(float); 
 
@@ -815,6 +821,43 @@ void copyData(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
     CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, n, cudaMemcpyHostToDevice))
+}
+
+
+void copyDataToHost(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
+{
+    int n = params->nx * params->ny * params->nz * sizeof(float); 
+
+    //e
+    CHECK(cudaMemcpy(field->ex0, deviceField->ex0, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->ey0, deviceField->ey0, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->ez0, deviceField->ez0, n, cudaMemcpyDeviceToHost))
+                                 
+    CHECK(cudaMemcpy(field->ex1, deviceField->ex1, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->ey1, deviceField->ey1, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->ez1, deviceField->ez1, n, cudaMemcpyDeviceToHost))
+                                 
+    CHECK(cudaMemcpy(field->ex2, deviceField->ex2, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->ey2, deviceField->ey2, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->ez2, deviceField->ez2, n, cudaMemcpyDeviceToHost))
+                                  
+    //h                           
+    CHECK(cudaMemcpy(field->hx, deviceField->hx, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->hy, deviceField->hy, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->hz, deviceField->hz, n, cudaMemcpyDeviceToHost))
+
+    //d
+    CHECK(cudaMemcpy(field->dx0, deviceField->dx0, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->dy0, deviceField->dy0, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->dz0, deviceField->dz0, n, cudaMemcpyDeviceToHost))
+                                 
+    CHECK(cudaMemcpy(field->dx1, deviceField->dx1, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->dy1, deviceField->dy1, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->dz1, deviceField->dz1, n, cudaMemcpyDeviceToHost))
+                                 
+    CHECK(cudaMemcpy(field->dx2, deviceField->dx2, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->dy2, deviceField->dy2, n, cudaMemcpyDeviceToHost))
+    CHECK(cudaMemcpy(field->dz2, deviceField->dz2, n, cudaMemcpyDeviceToHost))
 }
 
 
