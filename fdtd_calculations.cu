@@ -223,8 +223,6 @@ __global__ void updateSources(float *dzTarget, float *dzSource,
                                         dt/dy * (OFFSET(hx, x, y, z) - OFFSET(hx, x, y-1, z)) -
                                         jz[currIteration];
 
-            printf("%2d %2d %2d, %d, %g\n", x, y, z, i, val);
-    
             OFFSET(dzTarget, x, y, z) =  val;        
         }
 

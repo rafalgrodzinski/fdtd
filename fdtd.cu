@@ -754,14 +754,15 @@ void setupSources(FdtdParams *params)
     //setup jz 1/2
     i2 = 0;
     for(int i = istart; i <= temp+1; i += fine) {
-        params->jz[i2] = tmpdata[i + tmpOff] * 1e-15 / (params->dt / 3.0);
+        float val = tmpdata[i + tmpOff] * 1e-15 / params->dt / 3.0;
+        params->jz[i2] = val;
         i2++;
     }
     
     //setup tmpdata2
     for(int i = 2; i <= (1<<14); i++) {
         float val = (((params->jz[i + 1 - 1] - params->jz[i - 1]) / params->dt) +
-                    ((params->jz[i - 1] - params->jz[i - 1 - 1]) / params->dt)) / 
+                     ((params->jz[i - 1] - params->jz[i - 1 - 1]) / params->dt)) / 
                     2.0 * (params->dt * params->dz) / (params->dx * params->dy * params->dz);
                                     
         tmpdata2[i - 1 + tmpOff] = val;
