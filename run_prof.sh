@@ -8,4 +8,4 @@
 #PJM -j
 #PJM -L elapse=1:00:00
 
-time /gwfefs/opt/x86_64/cuda/7.5/bin/nvprof -o fdtd_prof ./fdtd
+/gwfefs/opt/x86_64/cuda/7.5/bin/nvprof -o fdtd_prof ./fdtd
