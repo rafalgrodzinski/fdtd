@@ -316,7 +316,7 @@ FdtdParams *initParamsWithPath(const char *filePath)
     params->dz = params->dx;
     params->dt = 1.0 * params->timeskip / (params->c * sqrt(1.0/pow(params->dx, 2.0) + 1.0/pow(params->dy, 2.0) + 1.0/pow(params->dz, 2.0)));
     params->mu0 = 4.0 * params->pi * pow(10.0, -7.0);
-    params->eps0 = 1.0 / params->mu0 * (params->c * params->c);
+    params->eps0 = 1.0 / (params->mu0 * params->c * params->c);
 
     return params;
 }
