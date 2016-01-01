@@ -7,10 +7,10 @@ fdtd: ${SOURCES}
 	${CC} -o ${OUTPUT} ${CFLAGS} ${SOURCES}
     
 clean:
-	rm -f ${OUTPUT} *.mod *.o *.s run*.sh.o* run*.sh.e* output/* fdtd_prof
+	rm -rf ${OUTPUT} *.mod *.o *.s run*.sh.o* run*.sh.e* output fdtd_prof
 
 run: fdtd
-	pjsub run.sh
+	if [ ! -d output ]; then mkdir output; fi; pjsub run.sh
 
 prof: fdtd
-	pjsub run_prof.sh
+	if [ ! -d output ]; then mkdir output; fi; pjsub run_prof.sh
