@@ -41,19 +41,6 @@ int main(int argc, char **argv)
     printf("Copying data to GPU...\n");
     copyDataToDevice(params, field, deviceField);
 
-    // Copy array params to device
-    float *deviceJz;
-    int *deviceSources;
-    int bytesCount;
-
-    bytesCount = (1<<16) * sizeof(float);
-    CHECK(cudaMalloc(&deviceJz, bytesCount))
-    CHECK(cudaMemcpy(deviceJz, params->jz, bytesCount, cudaMemcpyHostToDevice))
-
-    bytesCount = params->sourcesCount * 3 * sizeof(int);
-    CHECK(cudaMalloc(&deviceSources, bytesCount))
-    CHECK(cudaMemcpy(deviceSources, params->sources, bytesCount, cudaMemcpyHostToDevice))
-
     // Setup CUDA parameters
     dim3 gridSize = dim3((params->nx + BLOCK_X - 1)/BLOCK_X,
                          (params->ny + BLOCK_Y - 1)/BLOCK_Y,
@@ -66,25 +53,17 @@ int main(int argc, char **argv)
         printf("Running iteration %d\n", i);
 
         updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
-                                              deviceField->ex2, deviceField->ey2, deviceField->ez2,                 
-                                              params->nx, params->ny, params->nz,                 
-                                              params->dt, params->dx, params->dy, params->dz, 
-                                              params->mu0);
+                                              deviceField->ex2, deviceField->ey2, deviceField->ez2);
         CHECK(cudaDeviceSynchronize())
 
         updateDField<<<gridSize, blockSize>>>(deviceField->dx0, deviceField->dy0, deviceField->dz0, 
                                               deviceField->dx2, deviceField->dy2, deviceField->dz2, 
-                                              deviceField->hx,  deviceField->hy,  deviceField->hz,    
-                                              params->nx, params->ny, params->nz, 
-                                              params->dt, params->dx, params->dy, params->dz);
+                                              deviceField->hx,  deviceField->hy,  deviceField->hz);
         CHECK(cudaDeviceSynchronize())
  
-        updateSources<<<gridSize, blockSize>>>(deviceField->dz0, deviceField->dz2,                                 
-                                               deviceField->hx,  deviceField->hy,                                   
-                                               params->nx, params->ny, params->nz,
-                                               params->dt, params->dx, params->dy, params->dz, 
-                                               deviceSources, deviceJz,                                
-                                               params->sourcesCount, i);
+        updateSources<<<gridSize, blockSize>>>(deviceField->dz0, deviceField->dz2,
+                                               deviceField->hx,  deviceField->hy,
+                                               i);
         CHECK(cudaDeviceSynchronize())
             
         updateEField<<<gridSize, blockSize>>>(deviceField->ex0, deviceField->ey0, deviceField->ez0, 
@@ -93,18 +72,13 @@ int main(int argc, char **argv)
                                               deviceField->dx0, deviceField->dy0, deviceField->dz0, 
                                               deviceField->dx2, deviceField->dy2, deviceField->dz2, 
                                               deviceField->dx1, deviceField->dy1, deviceField->dz1, 
-                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD,             
-                                              params->nx, params->ny, params->nz, 
-                                              params->dt, params->eps0);
+                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD);
         CHECK(cudaDeviceSynchronize())
             
         updateMurBoundary<<<gridSize, blockSize>>>(deviceField->ex0,  deviceField->ey0,  deviceField->ez0,                 
                                                    deviceField->ex2,  deviceField->ey2,  deviceField->ez2,                 
                                                    deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
-                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd,                         
-                                                   params->nx, params->ny, params->nz,                 
-                                                   params->dt, params->dx, params->dy, params->dz, 
-                                                   params->mu0, params->eps0);
+                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd);
         CHECK(cudaDeviceSynchronize());
 
         copyDataToHost(params, field, deviceField);
@@ -119,45 +93,32 @@ int main(int argc, char **argv)
         printf("Running iteration %d\n", i+1);
 
         updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
-                                              deviceField->ex0, deviceField->ey0, deviceField->ez0,                 
-                                              params->nx, params->ny, params->nz,                 
-                                              params->dt, params->dx, params->dy, params->dz, 
-                                              params->mu0);
+                                              deviceField->ex0, deviceField->ey0, deviceField->ez0);
         CHECK(cudaDeviceSynchronize())
 
         updateDField<<<gridSize, blockSize>>>(deviceField->dx1, deviceField->dy1, deviceField->dz1, 
                                               deviceField->dx0, deviceField->dy0, deviceField->dz0, 
-                                              deviceField->hx,  deviceField->hy,  deviceField->hz,    
-                                              params->nx, params->ny, params->nz, 
-                                              params->dt, params->dx, params->dy, params->dz);
+                                              deviceField->hx,  deviceField->hy,  deviceField->hz);
         CHECK(cudaDeviceSynchronize())
  
-        updateSources<<<gridSize, blockSize>>>(deviceField->dz1, deviceField->dz0,                                 
-                                               deviceField->hx,  deviceField->hy,                                   
-                                               params->nx, params->ny, params->nz,
-                                               params->dt, params->dx, params->dy, params->dz, 
-                                               deviceSources, deviceJz,                                
-                                               params->sourcesCount, i);
+        updateSources<<<gridSize, blockSize>>>(deviceField->dz1, deviceField->dz0,
+                                               deviceField->hx,  deviceField->hy,
+                                               i);
         CHECK(cudaDeviceSynchronize())
             
-        updateEField<<<gridSize, blockSize>>>(deviceField->ex1, deviceField->ey1, deviceField->ez1, 
-                                              deviceField->ex0, deviceField->ey0, deviceField->ez0, 
-                                              deviceField->ex2, deviceField->ey2, deviceField->ez2, 
-                                              deviceField->dx1, deviceField->dy1, deviceField->dz1, 
-                                              deviceField->dx0, deviceField->dy0, deviceField->dz0, 
-                                              deviceField->dx2, deviceField->dy2, deviceField->dz2, 
-                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD,             
-                                              params->nx, params->ny, params->nz, 
-                                              params->dt, params->eps0);
+        updateEField<<<gridSize, blockSize>>>(deviceField->ex1, deviceField->ey1, deviceField->ez1,
+                                              deviceField->ex0, deviceField->ey0, deviceField->ez0,
+                                              deviceField->ex2, deviceField->ey2, deviceField->ez2,
+                                              deviceField->dx1, deviceField->dy1, deviceField->dz1,
+                                              deviceField->dx0, deviceField->dy0, deviceField->dz0,
+                                              deviceField->dx2, deviceField->dy2, deviceField->dz2,
+                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD);
         CHECK(cudaDeviceSynchronize())
             
         updateMurBoundary<<<gridSize, blockSize>>>(deviceField->ex1,  deviceField->ey1,  deviceField->ez1,                 
                                                    deviceField->ex0,  deviceField->ey0,  deviceField->ez0,                 
                                                    deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
-                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd,                         
-                                                   params->nx, params->ny, params->nz,                 
-                                                   params->dt, params->dx, params->dy, params->dz, 
-                                                   params->mu0, params->eps0);
+                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd);
         CHECK(cudaDeviceSynchronize())
 
         copyDataToHost(params, field, deviceField);
@@ -172,25 +133,17 @@ int main(int argc, char **argv)
         printf("Running iteration %d\n", i+2);
 
         updateHField<<<gridSize, blockSize>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
-                                              deviceField->ex1, deviceField->ey1, deviceField->ez1,                 
-                                              params->nx, params->ny, params->nz,                 
-                                              params->dt, params->dx, params->dy, params->dz, 
-                                              params->mu0);
+                                              deviceField->ex1, deviceField->ey1, deviceField->ez1);
         CHECK(cudaDeviceSynchronize())
 
         updateDField<<<gridSize, blockSize>>>(deviceField->dx2, deviceField->dy2, deviceField->dz2, 
                                               deviceField->dx1, deviceField->dy1, deviceField->dz1, 
-                                              deviceField->hx,  deviceField->hy,  deviceField->hz,    
-                                              params->nx, params->ny, params->nz, 
-                                              params->dt, params->dx, params->dy, params->dz);
+                                              deviceField->hx,  deviceField->hy,  deviceField->hz);
         CHECK(cudaDeviceSynchronize())
  
-        updateSources<<<gridSize, blockSize>>>(deviceField->dz2, deviceField->dz1,                                 
-                                               deviceField->hx,  deviceField->hy,                                   
-                                               params->nx, params->ny, params->nz,
-                                               params->dt, params->dx, params->dy, params->dz, 
-                                               deviceSources, deviceJz,                                
-                                               params->sourcesCount, i);
+        updateSources<<<gridSize, blockSize>>>(deviceField->dz2, deviceField->dz1,
+                                               deviceField->hx,  deviceField->hy,
+                                               i);
         CHECK(cudaDeviceSynchronize())
             
         updateEField<<<gridSize, blockSize>>>(deviceField->ex2, deviceField->ey2, deviceField->ez2, 
@@ -199,18 +152,13 @@ int main(int argc, char **argv)
                                               deviceField->dx2, deviceField->dy2, deviceField->dz2, 
                                               deviceField->dx1, deviceField->dy1, deviceField->dz1, 
                                               deviceField->dx0, deviceField->dy0, deviceField->dz0, 
-                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD,             
-                                              params->nx, params->ny, params->nz, 
-                                              params->dt, params->eps0);
+                                              deviceField->sigma, deviceField->epsI, deviceField->epsS, deviceField->tauD);
         CHECK(cudaDeviceSynchronize())
             
         updateMurBoundary<<<gridSize, blockSize>>>(deviceField->ex2,  deviceField->ey2,  deviceField->ez2,                 
                                                    deviceField->ex1,  deviceField->ey1,  deviceField->ez1,                 
                                                    deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
-                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd,                         
-                                                   params->nx, params->ny, params->nz,                 
-                                                   params->dt, params->dx, params->dy, params->dz, 
-                                                   params->mu0, params->eps0);
+                                                   deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd);
         CHECK(cudaDeviceSynchronize())
 
         copyDataToHost(params, field, deviceField);
@@ -727,6 +675,7 @@ void setupSources(FdtdParams *params)
     float *tmpdata, *tmpdata2;
     int tmpOff = 1<<16;
 
+    params->jzCount = tmpOff;
     params->jz = (float *)calloc(tmpOff,     sizeof(float));
     tmpdata    = (float *)calloc(tmpOff * 2, sizeof(float));
     tmpdata2   = (float *)calloc(tmpOff * 2, sizeof(float));
@@ -825,6 +774,27 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
     CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, n, cudaMemcpyHostToDevice))
+
+    //Copy constant data
+    CHECK(cudaMemcpyToSymbol(&dNx, &params->nx, sizeof(int), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(&dNy, &params->ny, sizeof(int), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(&dNz, &params->nz, sizeof(int), 0, cudaMemcpyHostToDevice));
+
+    CHECK(cudaMemcpyToSymbol(&dDt, &params->dt, sizeof(float), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(&dDx, &params->dx, sizeof(float), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(&dDy, &params->dy, sizeof(float), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(&dDz, &params->dz, sizeof(float), 0, cudaMemcpyHostToDevice));
+
+    CHECK(cudaMemcpyToSymbol(&dMu0, &params->mu0, sizeof(float), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(&dEps0, &params->eps0, sizeof(float), 0, cudaMemcpyHostToDevice));
+
+    CHECK(cudaMemcpyToSymbol(&dSourcesCount, &params->sourcesCount, sizeof(int), 0, cudaMemcpyHostToDevice));
+
+    int sourcesCount = (D_MAX_SOURCES < params->sourcesCount) ? D_MAX_SOURCES : params->sourcesCount;
+    CHECK(cudaMemcpyToSymbol(dSources, params->sources, sizeof(float) * 3 * sourcesCount, 0, cudaMemcpyHostToDevice));
+
+    int jzCount = (D_MAX_JZ < params->jzCount) ? D_MAX_JZ : params->jzCount;
+    CHECK(cudaMemcpyToSymbol(dJz, params->jz, sizeof(float) * jzCount, 0, cudaMemcpyHostToDevice));
 }
 
 

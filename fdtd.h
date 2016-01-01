@@ -19,6 +19,7 @@ typedef struct
     float defaultEpsS;
     float defaultEpsI;
     float defaultTauD;
+    int   jzCount;
     float *jz;
 
     float pi; // Delicious pie
