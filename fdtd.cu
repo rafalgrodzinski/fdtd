@@ -332,23 +332,23 @@ void deallocParams(FdtdParams *params)
 
 void printParams(FdtdParams *params)
 {
-    printf("Field size:                 %dx%dx%d\n", params->nx, params->ny, params->nz);
+    printf("Field size:                 %04dx%04dx%04d\n", params->nx, params->ny, params->nz);
     printf("Iterations count:           %d\n", params->iterationsCount);
     printf("Input path:                 %s\n", params->inputPath);
     printf("Output path:                %s\n", params->outputPath);
     printf("Elements per wavelength:    %d\n", params->elementsPerWave);
-    printf("Wave frequency:             %g\n", params->waveFrequency);
-    printf("Pulse width:                %g\n", params->pulseWidth);
-    printf("Pulse modulation frequency: %g\n", params->pulseModulationFrequency);
+    printf("Wave frequency:             %9.3E\n", params->waveFrequency);
+    printf("Pulse width:                %9.3E\n", params->pulseWidth);
+    printf("Pulse modulation frequency: %9.3E\n", params->pulseModulationFrequency);
     printf("Sources count:              %d\n", params->sourcesCount);
     for(int i=0; i<params->sourcesCount; i++)
-        printf("Source position:            %dx%dx%d\n", params->sources[i*3 + 0] + 1,
-                                                         params->sources[i*3 + 1] + 1,
-                                                         params->sources[i*3 + 2] + 1);
-    printf("Default sigma:              %g\n", params->defaultSigma);
-    printf("Default eps_s:              %g\n", params->defaultEpsS);
-    printf("Default eps_i:              %g\n", params->defaultEpsI);
-    printf("Default tau_d:              %g\n", params->defaultTauD);
+        printf("Source position:            %04dx%04dx%04d\n", params->sources[i*3 + 0] + 1,
+                                                               params->sources[i*3 + 1] + 1,
+                                                               params->sources[i*3 + 2] + 1);
+    printf("Default sigma:              %9.3E\n", params->defaultSigma);
+    printf("Default eps_s:              %9.3E\n", params->defaultEpsS);
+    printf("Default eps_i:              %9.3E\n", params->defaultEpsI);
+    printf("Default tau_d:              %9.3E\n", params->defaultTauD);
     printf("\n");
 }
 
@@ -890,7 +890,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int iy = params->sources[isrc * 3 + 1];
         int iz = params->sources[isrc * 3 + 2];
         for(int ix=0; ix < params->nx; ix++) {
-            fprintf(outputFile, " %3d %3d %3d  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e\n", ix+1, iy+1, iz+1,
+            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
@@ -911,7 +911,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int ix = params->sources[isrc * 3 + 0];
         int iz = params->sources[isrc * 3 + 2];
         for(int iy=0; iy < params->ny; iy++) {
-            fprintf(outputFile, " %3d %3d %3d  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e\n", ix+1, iy+1, iz+1,
+            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
@@ -932,7 +932,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int ix = params->sources[isrc * 3 + 0];
         int iy = params->sources[isrc * 3 + 1];
         for(int iz=0; iz < params->nz; iz++) {
-            fprintf(outputFile, " %3d %3d %3d  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e  %9.3e\n", ix+1, iy+1, iz+1,
+            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
                     OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
                     OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
                     OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
