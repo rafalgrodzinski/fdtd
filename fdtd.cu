@@ -40,6 +40,7 @@ int main(int argc, char **argv)
 
     printf("Copying data to GPU...\n");
     copyDataToDevice(params, field, deviceField);
+    copySymbolsToDevice(params);
 
     // Setup CUDA parameters
     dim3 gridSize = dim3((params->nx + BLOCK_X - 1)/BLOCK_X,
