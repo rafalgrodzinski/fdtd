@@ -2,6 +2,7 @@
 #define FDTD_CALCULATIONS_H
 
 #include <cuda_runtime_api.h>
+#include "fdtd.h"
 
 #define D_MAX_SOURCES 16
 #define D_MAX_JZ 512
@@ -13,6 +14,8 @@ __constant__ int dSourcesCount;
 __constant__ float dSources[D_MAX_SOURCES * 3];
 __constant__ float dJz[D_MAX_JZ];
 
+
+void copySymbolsToDevice(FdtdParams *params);
 
 __global__ void updateHField(float *hx,       float *hy,       float *hz,
                              float *exSource, float *eySource, float *ezSource);

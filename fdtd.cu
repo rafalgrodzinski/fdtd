@@ -774,27 +774,6 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
     CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, n, cudaMemcpyHostToDevice))
-
-    //Copy constant data
-    CHECK(cudaMemcpyToSymbol(&dNx, &params->nx, sizeof(int), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(&dNy, &params->ny, sizeof(int), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(&dNz, &params->nz, sizeof(int), 0, cudaMemcpyHostToDevice));
-
-    CHECK(cudaMemcpyToSymbol(&dDt, &params->dt, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(&dDx, &params->dx, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(&dDy, &params->dy, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(&dDz, &params->dz, sizeof(float), 0, cudaMemcpyHostToDevice));
-
-    CHECK(cudaMemcpyToSymbol(&dMu0, &params->mu0, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(&dEps0, &params->eps0, sizeof(float), 0, cudaMemcpyHostToDevice));
-
-    CHECK(cudaMemcpyToSymbol(&dSourcesCount, &params->sourcesCount, sizeof(int), 0, cudaMemcpyHostToDevice));
-
-    int sourcesCount = (D_MAX_SOURCES < params->sourcesCount) ? D_MAX_SOURCES : params->sourcesCount;
-    CHECK(cudaMemcpyToSymbol(dSources, params->sources, sizeof(float) * 3 * sourcesCount, 0, cudaMemcpyHostToDevice));
-
-    int jzCount = (D_MAX_JZ < params->jzCount) ? D_MAX_JZ : params->jzCount;
-    CHECK(cudaMemcpyToSymbol(dJz, params->jz, sizeof(float) * jzCount, 0, cudaMemcpyHostToDevice));
 }
 
 
