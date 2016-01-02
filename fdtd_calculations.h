@@ -11,7 +11,7 @@ __constant__ int dNx, dNy, dNz;
 __constant__ float dDt, dDx, dDy, dDz;
 __constant__ float dMu0, dEps0;
 __constant__ int dSourcesCount;
-__constant__ float dSources[D_MAX_SOURCES * 3];
+__constant__ int dSources[D_MAX_SOURCES * 3];
 __constant__ float dJz[D_MAX_JZ];
 
 

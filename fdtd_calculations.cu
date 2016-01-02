@@ -7,25 +7,25 @@
 void copySymbolsToDevice(FdtdParams *params)
 {
 
-    CHECK(cudaMemcpyToSymbol(dNx, &params->nx, sizeof(int), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(dNy, &params->ny, sizeof(int), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(dNz, &params->nz, sizeof(int), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(dNx, &params->nx, sizeof(int)));
+    CHECK(cudaMemcpyToSymbol(dNy, &params->ny, sizeof(int)));
+    CHECK(cudaMemcpyToSymbol(dNz, &params->nz, sizeof(int)));
 
-    CHECK(cudaMemcpyToSymbol(dDt, &params->dt, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(dDx, &params->dx, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(dDy, &params->dy, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(dDz, &params->dz, sizeof(float), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(dDt, &params->dt, sizeof(float)));
+    CHECK(cudaMemcpyToSymbol(dDx, &params->dx, sizeof(float)));
+    CHECK(cudaMemcpyToSymbol(dDy, &params->dy, sizeof(float)));
+    CHECK(cudaMemcpyToSymbol(dDz, &params->dz, sizeof(float)));
 
-    CHECK(cudaMemcpyToSymbol(dMu0, &params->mu0, sizeof(float), 0, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpyToSymbol(dEps0, &params->eps0, sizeof(float), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(dMu0, &params->mu0, sizeof(float)));
+    CHECK(cudaMemcpyToSymbol(dEps0, &params->eps0, sizeof(float)));
 
-    CHECK(cudaMemcpyToSymbol(dSourcesCount, &params->sourcesCount, sizeof(int), 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(dSourcesCount, &params->sourcesCount, sizeof(int)));
 
     int sourcesCount = (D_MAX_SOURCES < params->sourcesCount) ? D_MAX_SOURCES : params->sourcesCount;
-    CHECK(cudaMemcpyToSymbol(dSources, params->sources, sizeof(float) * 3 * sourcesCount, 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(dSources, params->sources, sizeof(int) * 3 * sourcesCount));
 
     int jzCount = (D_MAX_JZ < params->jzCount) ? D_MAX_JZ : params->jzCount;
-    CHECK(cudaMemcpyToSymbol(dJz, params->jz, sizeof(float) * jzCount, 0, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpyToSymbol(dJz, params->jz, sizeof(float) * jzCount));
 }
 
 
@@ -77,8 +77,8 @@ __global__ void updateHField(float *hx,       float *hy,       float *hz,
 }
 
 
-__global__ void updateDField(float *dDxTarget, float *dDyTarget, float *dDzTarget,
-                             float *dDxSource, float *dDySource, float *dDzSource,
+__global__ void updateDField(float *dxTarget, float *dyTarget, float *dzTarget,
+                             float *dxSource, float *dySource, float *dzSource,
                              float *hx,       float *hy,       float *hz)
 {
     int nx = dNx;
@@ -93,7 +93,7 @@ __global__ void updateDField(float *dDxTarget, float *dDyTarget, float *dDzTarge
     if(ix >= 0 && ix < nx-1 &&
        iy >= 1 && iy < ny-1 &&
        iz >= 1 && iz < nz-1) {
-        OFFSET(dDxTarget, ix, iy, iz) = OFFSET(dDxSource, ix, iy, iz) +
+        OFFSET(dxTarget, ix, iy, iz) = OFFSET(dxSource, ix, iy, iz) +
                                        dDt/dDy * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix, iy-1, iz)) -
                                        dDt/dDz * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix, iy, iz-1));
     }
@@ -102,7 +102,7 @@ __global__ void updateDField(float *dDxTarget, float *dDyTarget, float *dDzTarge
     if(ix >= 1 && ix < nx-1 &&
        iy >= 0 && iy < ny-1 &&
        iz >= 1 && iz < nz-1) {
-        OFFSET(dDyTarget, ix, iy, iz) = OFFSET(dDySource, ix, iy, iz) +
+        OFFSET(dyTarget, ix, iy, iz) = OFFSET(dySource, ix, iy, iz) +
                                        dDt/dDz * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy, iz-1)) -
                                        dDt/dDx * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix-1, iy, iz));
     }
@@ -111,7 +111,7 @@ __global__ void updateDField(float *dDxTarget, float *dDyTarget, float *dDzTarge
     if(ix >= 1 && ix < nx-1 &&
        iy >= 1 && iy < ny-1 &&
        iz >= 0 && iz < nz-1) {
-            OFFSET(dDzTarget, ix, iy, iz) = OFFSET(dDzSource, ix, iy, iz) +
+            OFFSET(dzTarget, ix, iy, iz) = OFFSET(dzSource, ix, iy, iz) +
                                            dDt/dDx * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix-1, iy, iz)) -
                                            dDt/dDy * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy-1, iz));
     }
@@ -121,10 +121,10 @@ __global__ void updateDField(float *dDxTarget, float *dDyTarget, float *dDzTarge
 __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget,
                              float *exSource0, float *eySource0, float *ezSource0,
                              float *exSource1, float *eySource1, float *ezSource1,
-                             float *dDxSource0, float *dDySource0, float *dDzSource0,
-                             float *dDxSource1, float *dDySource1, float *dDzSource1,
-                             float *dDxSource2, float *dDySource2, float *dDzSource2,
-                             float *sigma,float *epsI, float *epsS, float *tauD)
+                             float *dxSource0, float *dySource0, float *dzSource0,
+                             float *dxSource1, float *dySource1, float *dzSource1,
+                             float *dxSource2, float *dySource2, float *dzSource2,
+                             float *sigma, float *epsI, float *epsS, float *tauD)
 {
     int nx = dNx;
     int ny = dNy;
@@ -160,9 +160,9 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
                                         OFFSET(exSource0, ix, iy, iz) -
                                         (2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
                                         OFFSET(exSource1, ix, iy, iz) +
-                                        (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dDxSource0, ix, iy, iz) -
-                                        (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dDxSource1, ix, iy, iz) +
-                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dDxSource2, ix, iy, iz)
+                                        (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dxSource0, ix, iy, iz) -
+                                        (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dxSource1, ix, iy, iz) +
+                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dxSource2, ix, iy, iz)
                                        );
     }
     
@@ -192,9 +192,9 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
                                         OFFSET(eySource0, ix, iy, iz) -
                                         (2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
                                         OFFSET(eySource1, ix, iy, iz) +
-                                        (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dDySource0, ix, iy, iz) -
-                                        (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dDySource1, ix, iy, iz) +
-                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dDySource2, ix, iy, iz)
+                                        (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dySource0, ix, iy, iz) -
+                                        (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dySource1, ix, iy, iz) +
+                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dySource2, ix, iy, iz)
                                        );
     }
     
@@ -224,15 +224,15 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
                                         OFFSET(ezSource0, ix, iy, iz) -
                                         (2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
                                         OFFSET(ezSource1, ix, iy, iz) +
-                                        (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dDzSource0, ix, iy, iz) -
-                                        (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dDzSource1, ix, iy, iz) +
-                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dDzSource2, ix, iy, iz)
+                                        (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dzSource0, ix, iy, iz) -
+                                        (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dzSource1, ix, iy, iz) +
+                                        (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dzSource2, ix, iy, iz)
                                        );
     }
 }
 
 
-__global__ void updateSources(float *dDzTarget, float *dDzSource,
+__global__ void updateSources(float *dzTarget, float *dzSource,
                               float *hx,       float *hy,
                               int currIteration)
 {
@@ -250,12 +250,12 @@ __global__ void updateSources(float *dDzTarget, float *dDzSource,
             int y = dSources[i * 3 + 1];
             int z = dSources[i * 3 + 2];
 
-            float val = OFFSET(dDzSource, x, y, z) +
+            float val = OFFSET(dzSource, x, y, z) +
                                         dDt/dDx * (OFFSET(hy, x, y, z) - OFFSET(hy, x-1, y, z)) -
                                         dDt/dDy * (OFFSET(hx, x, y, z) - OFFSET(hx, x, y-1, z)) -
                                         dJz[currIteration];
 
-            OFFSET(dDzTarget, x, y, z) =  val;        
+            OFFSET(dzTarget, x, y, z) =  val;        
         }
     }
 }
