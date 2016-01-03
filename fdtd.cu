@@ -80,11 +80,11 @@ int main(int argc, char **argv)
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex2, deviceField->ey2, deviceField->ez2);
 
+        CHECK(cudaEventRecord(eventH, streamH));
+
         CHECK(cudaMemcpyAsync(field->hx, deviceField->hx, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
-
-        CHECK(cudaEventRecord(eventH, streamH));
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
@@ -96,13 +96,13 @@ int main(int argc, char **argv)
         updateSources<<<gridSize, blockSize, 0, streamD>>>(deviceField->dz0, deviceField->dz2,
                                                            deviceField->hx,  deviceField->hy,
                                                            i);
+        
+        CHECK(cudaEventRecord(eventD, streamD));
 
         CHECK(cudaMemcpyAsync(field->dx0, deviceField->dx0, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy0, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz0, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
-        CHECK(cudaEventRecord(eventD, streamD));
-            
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
 
@@ -119,11 +119,11 @@ int main(int argc, char **argv)
                                                                deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
                                                                deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd);
 
+        CHECK(cudaEventRecord(eventE, streamE));
+
         CHECK(cudaMemcpyAsync(field->ex0, deviceField->ex0, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey0, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez0, bytesCount, cudaMemcpyDeviceToHost, streamE))
-
-        CHECK(cudaEventRecord(eventE, streamE));
 
         // Write results
         CHECK(cudaStreamSynchronize(streamH))
@@ -144,11 +144,11 @@ int main(int argc, char **argv)
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex0, deviceField->ey0, deviceField->ez0);
 
+        CHECK(cudaEventRecord(eventH, streamH));
+    
         CHECK(cudaMemcpyAsync(field->hx, deviceField->hx, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
-
-        CHECK(cudaEventRecord(eventH, streamH));
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
@@ -161,11 +161,11 @@ int main(int argc, char **argv)
                                                            deviceField->hx,  deviceField->hy,
                                                            i);
 
+        CHECK(cudaEventRecord(eventD, streamD));
+
         CHECK(cudaMemcpyAsync(field->dx1, deviceField->dx1, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dy1, deviceField->dy1, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz1, deviceField->dz1, bytesCount, cudaMemcpyDeviceToHost, streamD))
-
-        CHECK(cudaEventRecord(eventD, streamD));
  
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
@@ -183,11 +183,11 @@ int main(int argc, char **argv)
                                                                deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
                                                                deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd);
 
+        CHECK(cudaEventRecord(eventE, streamE));
+
         CHECK(cudaMemcpyAsync(field->ex1, deviceField->ex1, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ey1, deviceField->ey1, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez1, deviceField->ez1, bytesCount, cudaMemcpyDeviceToHost, streamE))
-
-        CHECK(cudaEventRecord(eventE, streamE));
 
         // Write results
         CHECK(cudaStreamSynchronize(streamH))
@@ -208,11 +208,11 @@ int main(int argc, char **argv)
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex1, deviceField->ey1, deviceField->ez1);
 
+        CHECK(cudaEventRecord(eventH, streamH));
+
         CHECK(cudaMemcpyAsync(field->hx, deviceField->hx, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
-
-        CHECK(cudaEventRecord(eventH, streamH));
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
@@ -225,11 +225,11 @@ int main(int argc, char **argv)
                                                            deviceField->hx,  deviceField->hy,
                                                            i);
 
+        CHECK(cudaEventRecord(eventD, streamD));
+
         CHECK(cudaMemcpyAsync(field->dx2, deviceField->dx2, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dy2, deviceField->dy2, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz2, deviceField->dz2, bytesCount, cudaMemcpyDeviceToHost, streamD))
-
-        CHECK(cudaEventRecord(eventD, streamD));
             
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
@@ -247,12 +247,11 @@ int main(int argc, char **argv)
                                                                deviceField->rpx0, deviceField->rpy0, deviceField->rpz0,                         
                                                                deviceField->rpxEnd, deviceField->rpyEnd, deviceField->rpzEnd);
 
+        CHECK(cudaEventRecord(eventE, streamE));
+
         CHECK(cudaMemcpyAsync(field->ex2, deviceField->ex2, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ey2, deviceField->ey2, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez2, deviceField->ez2, bytesCount, cudaMemcpyDeviceToHost, streamE))
-
-        CHECK(cudaEventRecord(eventE, streamE));
-
 
         // Write results
         CHECK(cudaStreamSynchronize(streamH))
