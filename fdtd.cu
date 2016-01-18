@@ -9,9 +9,9 @@
 #include "fdtd_calculations.h"
 
 
-#define BLOCK_X 4
-#define BLOCK_Y 4
-#define BLOCK_Z 4
+#define BLOCK_X 128
+#define BLOCK_Y 1
+#define BLOCK_Z 1
 
 
 int main(int argc, char **argv)

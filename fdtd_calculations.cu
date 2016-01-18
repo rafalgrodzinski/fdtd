@@ -134,32 +134,18 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
     int iy = threadIdx.y + blockIdx.y * blockDim.y;
     int iz = threadIdx.z + blockIdx.z * blockDim.z;
 
+    float a = 2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz);
+    float b = a + 2.0 * dDt * (dEps0 * OFFSET(epsS, ix, iy, iz) + OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz));
+    float c = 1.0/(b + OFFSET(sigma, ix, iy, iz) * dDt * dDt);
+    float d = (2.0 * b - OFFSET(sigma, ix, iy, iz) * dDt * dDt);
+
     // Update ex
     if(ix >= 0 && ix < nx-1 &&
        iy >= 1 && iy < ny-1 &&
        iz >= 1 && iz < nz-1) {
-        OFFSET(exTarget, ix, iy, iz) = (
-                                        1.0/(2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
-                                        2.0 * dDt *
-                                        (
-                                         dEps0 * OFFSET(epsS, ix, iy, iz) +
-                                         OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
-                                        ) +
-                                        OFFSET(sigma, ix, iy, iz) * dDt * dDt)
-                                       ) *
-                                       (
-                                        (
-                                         4.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
-                                         2.0 * dDt *
-                                         (
-                                          dEps0 * OFFSET(epsS, ix, iy, iz) +
-                                          OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
-                                         ) -
-                                         OFFSET(sigma, ix, iy, iz) * dDt * dDt
-                                        ) *
-                                        OFFSET(exSource0, ix, iy, iz) -
-                                        (2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
-                                        OFFSET(exSource1, ix, iy, iz) +
+        OFFSET(exTarget, ix, iy, iz) = c *
+                                       (d * OFFSET(exSource0, ix, iy, iz) -
+                                        a * OFFSET(exSource1, ix, iy, iz) +
                                         (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dxSource0, ix, iy, iz) -
                                         (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dxSource1, ix, iy, iz) +
                                         (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dxSource2, ix, iy, iz)
@@ -170,28 +156,9 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
     if(ix >= 1 && ix <= nx-1 &&
        iy >= 0 && iy <= ny-1 &&
        iz >= 1 && iz <= nz-1) {
-        OFFSET(eyTarget, ix, iy, iz) = (
-                                        1.0/(2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
-                                        2.0 * dDt *
-                                        (
-                                         dEps0 * OFFSET(epsS, ix, iy, iz) +
-                                         OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
-                                        ) +
-                                        OFFSET(sigma, ix, iy, iz) * dDt * dDt)
-                                       ) *
-                                       (
-                                        (
-                                         4.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
-                                         2.0 * dDt *
-                                         (
-                                          dEps0 * OFFSET(epsS, ix, iy, iz) +
-                                          OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
-                                         ) -
-                                         OFFSET(sigma, ix, iy, iz) * dDt * dDt
-                                        ) *
-                                        OFFSET(eySource0, ix, iy, iz) -
-                                        (2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
-                                        OFFSET(eySource1, ix, iy, iz) +
+        OFFSET(eyTarget, ix, iy, iz) = c *
+                                       (d * OFFSET(eySource0, ix, iy, iz) -
+                                        a * OFFSET(eySource1, ix, iy, iz) +
                                         (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dySource0, ix, iy, iz) -
                                         (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dySource1, ix, iy, iz) +
                                         (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dySource2, ix, iy, iz)
@@ -202,28 +169,9 @@ __global__ void updateEField(float *exTarget,  float *eyTarget,  float *ezTarget
     if(ix >= 1 && ix <= nx-1 &&
        iy >= 0 && iy <= ny-1 &&
        iz >= 1 && iz <= nz-1) {
-        OFFSET(ezTarget, ix, iy, iz) = (
-                                        1.0/(2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
-                                        2.0 * dDt *
-                                        (
-                                         dEps0 * OFFSET(epsS, ix, iy, iz) +
-                                         OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
-                                        ) +
-                                        OFFSET(sigma, ix, iy, iz) * dDt * dDt)
-                                       ) *
-                                       (
-                                        (
-                                         4.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz) +
-                                         2.0 * dDt *
-                                         (
-                                          dEps0 * OFFSET(epsS, ix, iy, iz) +
-                                          OFFSET(sigma, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)
-                                         ) -
-                                         OFFSET(sigma, ix, iy, iz) * dDt * dDt
-                                        ) *
-                                        OFFSET(ezSource0, ix, iy, iz) -
-                                        (2.0 * dEps0 * OFFSET(epsI, ix, iy, iz) * OFFSET(tauD, ix, iy, iz)) *
-                                        OFFSET(ezSource1, ix, iy, iz) +
+        OFFSET(ezTarget, ix, iy, iz) = c *
+                                       (d * OFFSET(ezSource0, ix, iy, iz) -
+                                        a * OFFSET(ezSource1, ix, iy, iz) +
                                         (2.0 * (dDt + OFFSET(tauD, ix, iy, iz))) * OFFSET(dzSource0, ix, iy, iz) -
                                         (2.0 * dDt + 4.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dzSource1, ix, iy, iz) +
                                         (2.0 * OFFSET(tauD, ix, iy, iz)) * OFFSET(dzSource2, ix, iy, iz)
