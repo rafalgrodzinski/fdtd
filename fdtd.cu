@@ -71,6 +71,18 @@ int main(int argc, char **argv)
 
     // Main loop
     for(int i=0; i<params->iterationsCount; i += 3) {
+        float *hxBuffer;
+        float *hyBuffer;
+        float *hzBuffer;
+
+        float *dxBuffer;
+        float *dyBuffer;
+        float *dzBuffer;
+
+        float *exBuffer;
+        float *eyBuffer;
+        float *ezBuffer;
+
         // Run 0
         printf("Running iteration %d\n", i);
 
@@ -86,6 +98,10 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
+        hxBuffer = (float *)malloc(bytesCount);
+        hyBuffer = (float *)malloc(bytesCount);
+        hzBuffer = (float *)malloc(bytesCount);
+
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
 
@@ -96,12 +112,16 @@ int main(int argc, char **argv)
         updateSources<<<gridSize, blockSize, 0, streamD>>>(deviceField->dz0, deviceField->dz2,
                                                            deviceField->hx,  deviceField->hy,
                                                            i);
-        
+
         CHECK(cudaEventRecord(eventD, streamD));
 
         CHECK(cudaMemcpyAsync(field->dx0, deviceField->dx0, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy0, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz0, bytesCount, cudaMemcpyDeviceToHost, streamD))
+
+        dxBuffer = (float *)malloc(bytesCount);
+        dyBuffer = (float *)malloc(bytesCount);
+        dzBuffer = (float *)malloc(bytesCount);
 
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
@@ -125,14 +145,31 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey0, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez0, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
+        exBuffer = (float *)malloc(bytesCount);
+        eyBuffer = (float *)malloc(bytesCount);
+        ezBuffer = (float *)malloc(bytesCount);
+
         // Write results
         CHECK(cudaStreamSynchronize(streamH))
         CHECK(cudaStreamSynchronize(streamD))
         CHECK(cudaStreamSynchronize(streamE))
 
+        memcpy(hxBuffer, field->hx, bytesCount);
+        memcpy(hyBuffer, field->hy, bytesCount);
+        memcpy(hzBuffer, field->hz, bytesCount);
+
+        memcpy(dxBuffer, field->dx0, bytesCount);
+        memcpy(dyBuffer, field->dy0, bytesCount);
+        memcpy(dzBuffer, field->dz0, bytesCount);
+
+        memcpy(exBuffer, field->ex0, bytesCount);
+        memcpy(eyBuffer, field->ey0, bytesCount);
+        memcpy(ezBuffer, field->ez0, bytesCount);
+
         writeResults(params, field,
-                     field->ex0, field->ey0, field->ez0,
-                     field->dx0, field->dy0, field->dz0,
+                     hxBuffer, hyBuffer, hzBuffer,
+                     dxBuffer, dyBuffer, dzBuffer,
+                     exBuffer, eyBuffer, ezBuffer,
                      i, params->outputPath);
 
         // Run 1
@@ -150,6 +187,10 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
+        hxBuffer = (float *)malloc(bytesCount);
+        hyBuffer = (float *)malloc(bytesCount);
+        hzBuffer = (float *)malloc(bytesCount);
+
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
 
@@ -163,9 +204,13 @@ int main(int argc, char **argv)
 
         CHECK(cudaEventRecord(eventD, streamD));
 
-        CHECK(cudaMemcpyAsync(field->dx1, deviceField->dx1, bytesCount, cudaMemcpyDeviceToHost, streamD))
-        CHECK(cudaMemcpyAsync(field->dy1, deviceField->dy1, bytesCount, cudaMemcpyDeviceToHost, streamD))
-        CHECK(cudaMemcpyAsync(field->dz1, deviceField->dz1, bytesCount, cudaMemcpyDeviceToHost, streamD))
+        CHECK(cudaMemcpyAsync(field->dx0, deviceField->dx1, bytesCount, cudaMemcpyDeviceToHost, streamD))
+        CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy1, bytesCount, cudaMemcpyDeviceToHost, streamD))
+        CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz1, bytesCount, cudaMemcpyDeviceToHost, streamD))
+
+        dxBuffer = (float *)malloc(bytesCount);
+        dyBuffer = (float *)malloc(bytesCount);
+        dzBuffer = (float *)malloc(bytesCount);
  
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
@@ -185,19 +230,36 @@ int main(int argc, char **argv)
 
         CHECK(cudaEventRecord(eventE, streamE));
 
-        CHECK(cudaMemcpyAsync(field->ex1, deviceField->ex1, bytesCount, cudaMemcpyDeviceToHost, streamE))
-        CHECK(cudaMemcpyAsync(field->ey1, deviceField->ey1, bytesCount, cudaMemcpyDeviceToHost, streamE))
-        CHECK(cudaMemcpyAsync(field->ez1, deviceField->ez1, bytesCount, cudaMemcpyDeviceToHost, streamE))
+        CHECK(cudaMemcpyAsync(field->ex0, deviceField->ex1, bytesCount, cudaMemcpyDeviceToHost, streamE))
+        CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey1, bytesCount, cudaMemcpyDeviceToHost, streamE))
+        CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez1, bytesCount, cudaMemcpyDeviceToHost, streamE))
+
+        exBuffer = (float *)malloc(bytesCount);
+        eyBuffer = (float *)malloc(bytesCount);
+        ezBuffer = (float *)malloc(bytesCount);
 
         // Write results
         CHECK(cudaStreamSynchronize(streamH))
         CHECK(cudaStreamSynchronize(streamD))
         CHECK(cudaStreamSynchronize(streamE))
 
+        memcpy(hxBuffer, field->hx, bytesCount);
+        memcpy(hyBuffer, field->hy, bytesCount);
+        memcpy(hzBuffer, field->hz, bytesCount);
+
+        memcpy(dxBuffer, field->dx0, bytesCount);
+        memcpy(dyBuffer, field->dy0, bytesCount);
+        memcpy(dzBuffer, field->dz0, bytesCount);
+
+        memcpy(exBuffer, field->ex0, bytesCount);
+        memcpy(eyBuffer, field->ey0, bytesCount);
+        memcpy(ezBuffer, field->ez0, bytesCount);
+
         writeResults(params, field,
-                     field->ex1, field->ey1, field->ez1,
-                     field->dx1, field->dy1, field->dz1,
-                     i+1, params->outputPath);
+                     hxBuffer, hyBuffer, hzBuffer,
+                     dxBuffer, dyBuffer, dzBuffer,
+                     exBuffer, eyBuffer, ezBuffer,
+                     i, params->outputPath);
 
         // Run 2
         printf("Running iteration %d\n", i+2);
@@ -214,6 +276,10 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
+        hxBuffer = (float *)malloc(bytesCount);
+        hyBuffer = (float *)malloc(bytesCount);
+        hzBuffer = (float *)malloc(bytesCount);
+
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
 
@@ -227,9 +293,13 @@ int main(int argc, char **argv)
 
         CHECK(cudaEventRecord(eventD, streamD));
 
-        CHECK(cudaMemcpyAsync(field->dx2, deviceField->dx2, bytesCount, cudaMemcpyDeviceToHost, streamD))
-        CHECK(cudaMemcpyAsync(field->dy2, deviceField->dy2, bytesCount, cudaMemcpyDeviceToHost, streamD))
-        CHECK(cudaMemcpyAsync(field->dz2, deviceField->dz2, bytesCount, cudaMemcpyDeviceToHost, streamD))
+        CHECK(cudaMemcpyAsync(field->dx0, deviceField->dx2, bytesCount, cudaMemcpyDeviceToHost, streamD))
+        CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy2, bytesCount, cudaMemcpyDeviceToHost, streamD))
+        CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz2, bytesCount, cudaMemcpyDeviceToHost, streamD))
+
+        dxBuffer = (float *)malloc(bytesCount);
+        dyBuffer = (float *)malloc(bytesCount);
+        dzBuffer = (float *)malloc(bytesCount);
             
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
@@ -249,19 +319,36 @@ int main(int argc, char **argv)
 
         CHECK(cudaEventRecord(eventE, streamE));
 
-        CHECK(cudaMemcpyAsync(field->ex2, deviceField->ex2, bytesCount, cudaMemcpyDeviceToHost, streamE))
-        CHECK(cudaMemcpyAsync(field->ey2, deviceField->ey2, bytesCount, cudaMemcpyDeviceToHost, streamE))
-        CHECK(cudaMemcpyAsync(field->ez2, deviceField->ez2, bytesCount, cudaMemcpyDeviceToHost, streamE))
+        CHECK(cudaMemcpyAsync(field->ex0, deviceField->ex2, bytesCount, cudaMemcpyDeviceToHost, streamE))
+        CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey2, bytesCount, cudaMemcpyDeviceToHost, streamE))
+        CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez2, bytesCount, cudaMemcpyDeviceToHost, streamE))
+
+        exBuffer = (float *)malloc(bytesCount);
+        eyBuffer = (float *)malloc(bytesCount);
+        ezBuffer = (float *)malloc(bytesCount);
 
         // Write results
         CHECK(cudaStreamSynchronize(streamH))
         CHECK(cudaStreamSynchronize(streamD))
         CHECK(cudaStreamSynchronize(streamE))
 
+        memcpy(hxBuffer, field->hx, bytesCount);
+        memcpy(hyBuffer, field->hy, bytesCount);
+        memcpy(hzBuffer, field->hz, bytesCount);
+
+        memcpy(dxBuffer, field->dx0, bytesCount);
+        memcpy(dyBuffer, field->dy0, bytesCount);
+        memcpy(dzBuffer, field->dz0, bytesCount);
+
+        memcpy(exBuffer, field->ex0, bytesCount);
+        memcpy(eyBuffer, field->ey0, bytesCount);
+        memcpy(ezBuffer, field->ez0, bytesCount);
+
         writeResults(params, field,
-                     field->ex2, field->ey2, field->ez2,
-                     field->dx2, field->dy2, field->dz2,
-                     i+2, params->outputPath);
+                     hxBuffer, hyBuffer, hzBuffer,
+                     dxBuffer, dyBuffer, dzBuffer,
+                     exBuffer, eyBuffer, ezBuffer,
+                     i, params->outputPath);
     }
 
     // Clean up
@@ -826,7 +913,7 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
     int n = params->nx * params->ny * params->nz * sizeof(float); 
 
     //e
-    CHECK(cudaMemcpy(deviceField->ex0, field->ex0, n, cudaMemcpyHostToDevice))
+    /*CHECK(cudaMemcpy(deviceField->ex0, field->ex0, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->ey0, field->ey0, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->ez0, field->ez0, n, cudaMemcpyHostToDevice))
 
@@ -836,15 +923,31 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 
     CHECK(cudaMemcpy(deviceField->ex2, field->ex2, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->ey2, field->ey2, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ez2, field->ez2, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->ez2, field->ez2, n, cudaMemcpyHostToDevice))*/
+
+    CHECK(cudaMemset(deviceField->ex0, 0, n))
+    CHECK(cudaMemset(deviceField->ey0, 0, n))
+    CHECK(cudaMemset(deviceField->ez0, 0, n))
+
+    CHECK(cudaMemset(deviceField->ex1, 0, n))
+    CHECK(cudaMemset(deviceField->ey1, 0, n))
+    CHECK(cudaMemset(deviceField->ez1, 0, n))
+
+    CHECK(cudaMemset(deviceField->ex2, 0, n))
+    CHECK(cudaMemset(deviceField->ey2, 0, n))
+    CHECK(cudaMemset(deviceField->ez2, 0, n))
 
     //h
-    CHECK(cudaMemcpy(deviceField->hx, field->hx, n, cudaMemcpyHostToDevice))
+    /*CHECK(cudaMemcpy(deviceField->hx, field->hx, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->hy, field->hy, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->hz, field->hz, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->hz, field->hz, n, cudaMemcpyHostToDevice))*/
+
+    CHECK(cudaMemset(deviceField->hx, 0, n))
+    CHECK(cudaMemset(deviceField->hy, 0, n))
+    CHECK(cudaMemset(deviceField->hz, 0, n))
 
     //d
-    CHECK(cudaMemcpy(deviceField->dx0, field->dx0, n, cudaMemcpyHostToDevice))
+    /*CHECK(cudaMemcpy(deviceField->dx0, field->dx0, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->dy0, field->dy0, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->dz0, field->dz0, n, cudaMemcpyHostToDevice))
 
@@ -854,8 +957,21 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 
     CHECK(cudaMemcpy(deviceField->dx2, field->dx2, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->dy2, field->dy2, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dz2, field->dz2, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->dz2, field->dz2, n, cudaMemcpyHostToDevice))*/
 
+    CHECK(cudaMemset(deviceField->dx0, 0, n))
+    CHECK(cudaMemset(deviceField->dy0, 0, n))
+    CHECK(cudaMemset(deviceField->dz0, 0, n))
+
+    CHECK(cudaMemset(deviceField->dx1, 0, n))
+    CHECK(cudaMemset(deviceField->dy1, 0, n))
+    CHECK(cudaMemset(deviceField->dz1, 0, n))
+
+    CHECK(cudaMemset(deviceField->dx2, 0, n))
+    CHECK(cudaMemset(deviceField->dy2, 0, n))
+    CHECK(cudaMemset(deviceField->dz2, 0, n))
+
+    // eps, tau, sigma
     CHECK(cudaMemcpy(deviceField->epsI, field->epsI, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->epsS, field->epsS, n, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->tauD, field->tauD, n, cudaMemcpyHostToDevice))
@@ -871,7 +987,7 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 }
 
 
-void copyDataToHost(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
+/*void copyDataToHost(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
 {
     int n = params->nx * params->ny * params->nz * sizeof(float); 
 
@@ -905,12 +1021,13 @@ void copyDataToHost(FdtdParams *params, FdtdField *field, FdtdField *deviceField
     CHECK(cudaMemcpy(field->dx2, deviceField->dx2, n, cudaMemcpyDeviceToHost))
     CHECK(cudaMemcpy(field->dy2, deviceField->dy2, n, cudaMemcpyDeviceToHost))
     CHECK(cudaMemcpy(field->dz2, deviceField->dz2, n, cudaMemcpyDeviceToHost))
-}
+}*/
 
 
 void writeResults(FdtdParams *params, FdtdField *field,
-                  float *exSource, float *eySource, float *ezSource,
+                  float *hxSource, float *hySource, float *hzSource,
                   float *dxSource, float *dySource, float *dzSource,
+                  float *exSource, float *eySource, float *ezSource,
                   int currentIteration, char *outputPath)
 {
     char outputFilePath[1024];
@@ -934,9 +1051,9 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int iz = params->sources[isrc * 3 + 2];
         for(int ix=0; ix < params->nx; ix++) {
             fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
-                    OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
-                    OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
-                    OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
+                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
         }
     }
     fclose(outputFile);
@@ -955,9 +1072,9 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int iz = params->sources[isrc * 3 + 2];
         for(int iy=0; iy < params->ny; iy++) {
             fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
-                    OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
-                    OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
-                    OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
+                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
         }
     }
     fclose(outputFile);
@@ -976,9 +1093,9 @@ void writeResults(FdtdParams *params, FdtdField *field,
         int iy = params->sources[isrc * 3 + 1];
         for(int iz=0; iz < params->nz; iz++) {
             fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
-                    OFFSET(dxSource, ix, iy, iz),  OFFSET(dySource, ix, iy, iz),  OFFSET(dzSource, ix, iy, iz),
-                    OFFSET(field->hx, ix, iy, iz), OFFSET(field->hy, ix, iy, iz), OFFSET(field->hz, ix, iy, iz),
-                    OFFSET(exSource, ix, iy, iz),  OFFSET(eySource, ix, iy, iz),  OFFSET(ezSource, ix, iy, iz));
+                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
         }
     }
     fclose(outputFile);
