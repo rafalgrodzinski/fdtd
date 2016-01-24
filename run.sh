@@ -7,3 +7,4 @@
 
 /gwfefs/opt/x86_64/cuda/7.5/bin/nvprof --metrics achieved_occupancy,gld_efficiency,gld_throughput,gst_efficiency,gst_throughput,tex_cache_throughput ./fdtd
 /gwfefs/opt/x86_64/cuda/7.5/bin/nvprof ./fdtd
+/gwfefs/opt/x86_64/cuda/7.5/bin/nvprof -o fdtd_prof ./fdtd
