@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     printf("Initializing sources...\n");
     setupSources(params);
 
-    printf("Copying data to GPU...\n");
+    printf("Copying data to GPU...\n\n");
     copyDataToDevice(params, field, deviceField);
     copySymbolsToDevice(params);
 
@@ -69,6 +69,17 @@ int main(int argc, char **argv)
     int bytesCount = params->nx * params->ny * params->nz * sizeof(float); 
 
     // Threads
+    float *hxBuffer;
+    float *hyBuffer;
+    float *hzBuffer;
+
+    float *dxBuffer;
+    float *dyBuffer;
+    float *dzBuffer;
+
+    float *exBuffer;
+    float *eyBuffer;
+    float *ezBuffer;
     ResultsParams *resultsParams;
     pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
 
@@ -76,19 +87,6 @@ int main(int argc, char **argv)
 
     // Main loop
     for(int i=0; i<params->iterationsCount; i += 3) {
-        float *hxBuffer;
-        float *hyBuffer;
-        float *hzBuffer;
-
-        float *dxBuffer;
-        float *dyBuffer;
-        float *dzBuffer;
-
-        float *exBuffer;
-        float *eyBuffer;
-        float *ezBuffer;
-
-        //ResultParams *resultParams;
 
         // Run 0
         printf("Running iteration %d\n", i);
@@ -156,11 +154,12 @@ int main(int argc, char **argv)
         eyBuffer = (float *)malloc(bytesCount);
         ezBuffer = (float *)malloc(bytesCount);
 
-        // Write results
+        //Wait for data copy from GPU to finish
         CHECK(cudaStreamSynchronize(streamH))
         CHECK(cudaStreamSynchronize(streamD))
         CHECK(cudaStreamSynchronize(streamE))
 
+        //Copy results to buffers
         memcpy(hxBuffer, field->hx, bytesCount);
         memcpy(hyBuffer, field->hy, bytesCount);
         memcpy(hzBuffer, field->hz, bytesCount);
@@ -173,6 +172,7 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
+        //Setup data for new thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
@@ -187,6 +187,7 @@ int main(int argc, char **argv)
         resultsParams->ezSource = ezBuffer;
         resultsParams->currentIteration = i+0;
 
+        //Spawn new thread to write results
         pthread_create(&threads[i+0], NULL, writeResultsWithParams, resultsParams);
 
         // Run 1
@@ -255,11 +256,12 @@ int main(int argc, char **argv)
         eyBuffer = (float *)malloc(bytesCount);
         ezBuffer = (float *)malloc(bytesCount);
 
-        // Write results
+        //Wait for data copy from GPU to finish
         CHECK(cudaStreamSynchronize(streamH))
         CHECK(cudaStreamSynchronize(streamD))
         CHECK(cudaStreamSynchronize(streamE))
 
+        //Copy results to buffers
         memcpy(hxBuffer, field->hx, bytesCount);
         memcpy(hyBuffer, field->hy, bytesCount);
         memcpy(hzBuffer, field->hz, bytesCount);
@@ -272,6 +274,7 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
+        //Setup data for new thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
@@ -286,7 +289,8 @@ int main(int argc, char **argv)
         resultsParams->ezSource = ezBuffer;
         resultsParams->currentIteration = i+1;
 
-        pthread_create(&threads[i+0], NULL, writeResultsWithParams, NULL);
+        //Spawn new thread to write results
+        pthread_create(&threads[i+1], NULL, writeResultsWithParams, resultsParams);
 
         // Run 2
         printf("Running iteration %d\n", i+2);
@@ -354,11 +358,12 @@ int main(int argc, char **argv)
         eyBuffer = (float *)malloc(bytesCount);
         ezBuffer = (float *)malloc(bytesCount);
 
-        // Write results
+        //Wait for data copy from GPU to finish
         CHECK(cudaStreamSynchronize(streamH))
         CHECK(cudaStreamSynchronize(streamD))
         CHECK(cudaStreamSynchronize(streamE))
 
+        //Copy results to buffers
         memcpy(hxBuffer, field->hx, bytesCount);
         memcpy(hyBuffer, field->hy, bytesCount);
         memcpy(hzBuffer, field->hz, bytesCount);
@@ -371,6 +376,7 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
+        //Setup data for new thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
@@ -385,7 +391,8 @@ int main(int argc, char **argv)
         resultsParams->ezSource = ezBuffer;
         resultsParams->currentIteration = i+2;
 
-        pthread_create(&threads[i+0], NULL, writeResultsWithParams, NULL);
+        //Spawn new thread to write results
+        pthread_create(&threads[i+2], NULL, writeResultsWithParams, resultsParams);
     }
 
 
@@ -394,12 +401,12 @@ int main(int argc, char **argv)
         pthread_join(threads[i], NULL);
     }
 
+    // Clean up
     free(threads);
 
-    // Clean up
-    /*deallocDeviceField(deviceField);
+    deallocDeviceField(deviceField);
     deallocField(field);
-    deallocParams(params);*/
+    deallocParams(params);
 }
 
 
@@ -537,42 +544,31 @@ FdtdField *initFieldWithParams(FdtdParams *params)
         exit(EXIT_FAILURE);
     }
 
-    // e
-    CHECK(cudaHostAlloc(&field->ex0, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey0, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez0, n * sizeof(float), cudaHostAllocDefault))
-
-    CHECK(cudaHostAlloc(&field->ex1, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey1, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez1, n * sizeof(float), cudaHostAllocDefault))
-
-    CHECK(cudaHostAlloc(&field->ex2, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ey2, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->ez2, n * sizeof(float), cudaHostAllocDefault))
-
-    // h
+    //H
     CHECK(cudaHostAlloc(&field->hx, n * sizeof(float), cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->hy, n * sizeof(float), cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->hz, n * sizeof(float), cudaHostAllocDefault))
 
-    // d
+    //D
     CHECK(cudaHostAlloc(&field->dx0, n * sizeof(float), cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dy0, n * sizeof(float), cudaHostAllocDefault))
     CHECK(cudaHostAlloc(&field->dz0, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->dx1, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dy1, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dz1, n * sizeof(float), cudaHostAllocDefault))
-
-    CHECK(cudaHostAlloc(&field->dx2, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dy2, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->dz2, n * sizeof(float), cudaHostAllocDefault))
+    //E
+    CHECK(cudaHostAlloc(&field->ex0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ey0, n * sizeof(float), cudaHostAllocDefault))
+    CHECK(cudaHostAlloc(&field->ez0, n * sizeof(float), cudaHostAllocDefault))
 
     // sigma, eps, tau
-    CHECK(cudaHostAlloc(&field->sigma, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->epsS,  n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->epsI,  n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->tauD,  n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->sigma, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->epsS,  n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->epsI,  n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->tauD,  n * sizeof(float), cudaHostAllocDefault))
+    
+    field->sigma = (float *)malloc( n * sizeof(float));
+    field->epsS  = (float *)malloc( n * sizeof(float));
+    field->epsI  = (float *)malloc( n * sizeof(float));
+    field->tauD  = (float *)malloc( n * sizeof(float));
 
     for(int i = 0; i < n; i++) {
         field->sigma[i] = params->defaultSigma;
@@ -582,13 +578,21 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     }
 
     // rp
-    CHECK(cudaHostAlloc(&field->rpx0, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpy0, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpz0, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->rpx0, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->rpy0, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->rpz0, n * sizeof(float), cudaHostAllocDefault))
 
-    CHECK(cudaHostAlloc(&field->rpxEnd, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpyEnd, n * sizeof(float), cudaHostAllocDefault))
-    CHECK(cudaHostAlloc(&field->rpzEnd, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->rpxEnd, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->rpyEnd, n * sizeof(float), cudaHostAllocDefault))
+    //CHECK(cudaHostAlloc(&field->rpzEnd, n * sizeof(float), cudaHostAllocDefault))
+
+    field->rpx0 = (float *)malloc(n * sizeof(float));
+    field->rpy0 = (float *)malloc(n * sizeof(float)); 
+    field->rpz0 = (float *)malloc(n * sizeof(float)); 
+
+    field->rpxEnd = (float *)malloc(n * sizeof(float));
+    field->rpyEnd = (float *)malloc(n * sizeof(float));
+    field->rpzEnd = (float *)malloc(n * sizeof(float));  
 
     return field;
 }
@@ -596,51 +600,35 @@ FdtdField *initFieldWithParams(FdtdParams *params)
 
 void deallocField(FdtdField *field)
 {
-    // e
-    CHECK(cudaFree(field->ex0))
-    CHECK(cudaFree(field->ey0))
-    CHECK(cudaFree(field->ez0))
+    //H
+    CHECK(cudaFreeHost(field->hx));
+    CHECK(cudaFreeHost(field->hy));
+    CHECK(cudaFreeHost(field->hz));
 
-    CHECK(cudaFree(field->ex1))
-    CHECK(cudaFree(field->ey1))
-    CHECK(cudaFree(field->ez1))
+    //D
+    CHECK(cudaFreeHost(field->dx0));
+    CHECK(cudaFreeHost(field->dy0));
+    CHECK(cudaFreeHost(field->dz0));
 
-    CHECK(cudaFree(field->ex2))
-    CHECK(cudaFree(field->ey2))
-    CHECK(cudaFree(field->ez2))
+    //E
+    CHECK(cudaFreeHost(field->ex0));
+    CHECK(cudaFreeHost(field->ey0));
+    CHECK(cudaFreeHost(field->ez0));
 
-    // h
-    CHECK(cudaFree(field->hx))
-    CHECK(cudaFree(field->hy))
-    CHECK(cudaFree(field->hz))
+    //sigma, eps, tau
+    free(field->sigma);
+    free(field->epsS);
+    free(field->epsI);
+    free(field->tauD);
 
-    // d
-    CHECK(cudaFree(field->dx0))
-    CHECK(cudaFree(field->dy0))
-    CHECK(cudaFree(field->dz0))
+    //rp
+    free(field->rpx0);
+    free(field->rpy0);
+    free(field->rpz0);
 
-    CHECK(cudaFree(field->dx1))
-    CHECK(cudaFree(field->dy1))
-    CHECK(cudaFree(field->dz1))
-
-    CHECK(cudaFree(field->dx2))
-    CHECK(cudaFree(field->dy2))
-    CHECK(cudaFree(field->dz2))
-
-    // sigma, eps, tau
-    CHECK(cudaFree(&field->sigma))
-    CHECK(cudaFree(&field->epsS))
-    CHECK(cudaFree(&field->epsI))
-    CHECK(cudaFree(&field->tauD))
-
-    // rp
-    CHECK(cudaFree(&field->rpx0))
-    CHECK(cudaFree(&field->rpy0))
-    CHECK(cudaFree(&field->rpz0))
-
-    CHECK(cudaFree(&field->rpxEnd))
-    CHECK(cudaFree(&field->rpyEnd))
-    CHECK(cudaFree(&field->rpzEnd))
+    free(field->rpxEnd);
+    free(field->rpyEnd);
+    free(field->rpzEnd);
 
     free(field);
 }
@@ -773,7 +761,6 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
 
     for(int i=0; i<specsCount; i++) {
         fscanf(specsFile, "%d %s %g %g %g %g\n", &index, temp, &sigmaValue, &epsSValue, &epsIValue, &tauDValue);
-        //printf("Read %s @ %d: %g %g %g %g\n", temp, index, sigmaValue, epsSValue, epsIValue, tauDValue);
 
         specs[index*4 + 0] = sigmaValue;
         specs[index*4 + 1] = epsSValue;
@@ -797,8 +784,6 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
             exit(EXIT_FAILURE);
         }
 
-        //printf("Reading %s...\n", materialFileName);
-
         int width, height;
         fscanf(materialFile, "%s %s %s %d %d %s", temp, temp, temp, &width, &height, temp);
 
@@ -815,7 +800,7 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
             }
         }
 
-        //fclose(materialFile);
+        fclose(materialFile);
     }
 
     //free(specs);
@@ -955,80 +940,52 @@ void setupSources(FdtdParams *params)
 
 void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
 {
-    int n = params->nx * params->ny * params->nz * sizeof(float); 
+    int bytesCount = params->nx * params->ny * params->nz * sizeof(float); 
 
-    //e
-    /*CHECK(cudaMemcpy(deviceField->ex0, field->ex0, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ey0, field->ey0, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ez0, field->ez0, n, cudaMemcpyHostToDevice))
+    //H
+    CHECK(cudaMemset(deviceField->hx, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->hy, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->hz, 0, bytesCount))
 
-    CHECK(cudaMemcpy(deviceField->ex1, field->ex1, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ey1, field->ey1, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ez1, field->ez1, n, cudaMemcpyHostToDevice))
+    //D
+    CHECK(cudaMemset(deviceField->dx0, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->dy0, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->dz0, 0, bytesCount))
 
-    CHECK(cudaMemcpy(deviceField->ex2, field->ex2, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ey2, field->ey2, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->ez2, field->ez2, n, cudaMemcpyHostToDevice))*/
+    CHECK(cudaMemset(deviceField->dx1, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->dy1, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->dz1, 0, bytesCount))
 
-    CHECK(cudaMemset(deviceField->ex0, 0, n))
-    CHECK(cudaMemset(deviceField->ey0, 0, n))
-    CHECK(cudaMemset(deviceField->ez0, 0, n))
+    CHECK(cudaMemset(deviceField->dx2, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->dy2, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->dz2, 0, bytesCount))
 
-    CHECK(cudaMemset(deviceField->ex1, 0, n))
-    CHECK(cudaMemset(deviceField->ey1, 0, n))
-    CHECK(cudaMemset(deviceField->ez1, 0, n))
+    //E
+    CHECK(cudaMemset(deviceField->ex0, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->ey0, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->ez0, 0, bytesCount))
 
-    CHECK(cudaMemset(deviceField->ex2, 0, n))
-    CHECK(cudaMemset(deviceField->ey2, 0, n))
-    CHECK(cudaMemset(deviceField->ez2, 0, n))
+    CHECK(cudaMemset(deviceField->ex1, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->ey1, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->ez1, 0, bytesCount))
 
-    //h
-    /*CHECK(cudaMemcpy(deviceField->hx, field->hx, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->hy, field->hy, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->hz, field->hz, n, cudaMemcpyHostToDevice))*/
+    CHECK(cudaMemset(deviceField->ex2, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->ey2, 0, bytesCount))
+    CHECK(cudaMemset(deviceField->ez2, 0, bytesCount))
 
-    CHECK(cudaMemset(deviceField->hx, 0, n))
-    CHECK(cudaMemset(deviceField->hy, 0, n))
-    CHECK(cudaMemset(deviceField->hz, 0, n))
+    //eps, tau, sigma
+    CHECK(cudaMemcpy(deviceField->epsI,  field->epsI,  bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->epsS,  field->epsS,  bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->tauD,  field->tauD,  bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->sigma, field->sigma, bytesCount, cudaMemcpyHostToDevice))
 
-    //d
-    /*CHECK(cudaMemcpy(deviceField->dx0, field->dx0, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dy0, field->dy0, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dz0, field->dz0, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpx0, field->rpx0, bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpy0, field->rpy0, bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpz0, field->rpz0, bytesCount, cudaMemcpyHostToDevice))
 
-    CHECK(cudaMemcpy(deviceField->dx1, field->dx1, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dy1, field->dy1, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dz1, field->dz1, n, cudaMemcpyHostToDevice))
-
-    CHECK(cudaMemcpy(deviceField->dx2, field->dx2, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dy2, field->dy2, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->dz2, field->dz2, n, cudaMemcpyHostToDevice))*/
-
-    CHECK(cudaMemset(deviceField->dx0, 0, n))
-    CHECK(cudaMemset(deviceField->dy0, 0, n))
-    CHECK(cudaMemset(deviceField->dz0, 0, n))
-
-    CHECK(cudaMemset(deviceField->dx1, 0, n))
-    CHECK(cudaMemset(deviceField->dy1, 0, n))
-    CHECK(cudaMemset(deviceField->dz1, 0, n))
-
-    CHECK(cudaMemset(deviceField->dx2, 0, n))
-    CHECK(cudaMemset(deviceField->dy2, 0, n))
-    CHECK(cudaMemset(deviceField->dz2, 0, n))
-
-    // eps, tau, sigma
-    CHECK(cudaMemcpy(deviceField->epsI, field->epsI, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->epsS, field->epsS, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->tauD, field->tauD, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->sigma, field->sigma, n, cudaMemcpyHostToDevice))
-
-    CHECK(cudaMemcpy(deviceField->rpx0, field->rpx0, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpy0, field->rpy0, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpz0, field->rpz0, n, cudaMemcpyHostToDevice))
-
-    CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, n, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, n, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, bytesCount, cudaMemcpyHostToDevice))
 }
 
 
@@ -1124,6 +1081,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     }
     fclose(outputFile);
 
+    //Cleanup unnecessary buffers
     free(hxSource);
     free(hySource);
     free(hzSource);
