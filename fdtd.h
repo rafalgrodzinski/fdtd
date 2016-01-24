@@ -67,8 +67,7 @@ typedef struct
     float *eySource;
     float *ezSource;
     int currentIteration;
-    char *outputPath;
-} ResultParams;
+} ResultsParams;
 
 
 FdtdParams *initParamsWithPath(const char *);
@@ -85,10 +84,11 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field);
 void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
 void setupSources(FdtdParams *params);
 void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceField);
+void *writeResultsWithParams(void *params);
 void writeResults(FdtdParams *params, FdtdField *field,
                   float *hxSource, float *hySource, float *hzSource,
                   float *dxSource, float *dySource, float *dzSource,
                   float *exSource, float *eySource, float *ezSource,
-                  int currentIteration, char *outputPath);
+                  int currentIteration);
 
 #endif

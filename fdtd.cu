@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <complex.h>
-#include <thread>
+#include <pthread.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -67,6 +67,10 @@ int main(int argc, char **argv)
     CHECK(cudaEventCreate(&eventE))
     
     int bytesCount = params->nx * params->ny * params->nz * sizeof(float); 
+
+    // Threads
+    ResultsParams *resultsParams;
+    pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
 
     CHECK(cudaEventRecord(eventE))
 
@@ -169,11 +173,21 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
-        std::thread threadRun0(writeResults, params, field,
-                                             hxBuffer, hyBuffer, hzBuffer,
-                                             dxBuffer, dyBuffer, dzBuffer,
-                                             exBuffer, eyBuffer, ezBuffer,
-                                             i, params->outputPath);
+        resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
+        resultsParams->params = params;
+        resultsParams->field = field;
+        resultsParams->hxSource = hxBuffer;
+        resultsParams->hySource = hyBuffer;
+        resultsParams->hzSource = hzBuffer;
+        resultsParams->dxSource = dxBuffer;
+        resultsParams->dySource = dyBuffer;
+        resultsParams->dzSource = dzBuffer;
+        resultsParams->exSource = exBuffer;
+        resultsParams->eySource = eyBuffer;
+        resultsParams->ezSource = ezBuffer;
+        resultsParams->currentIteration = i+0;
+
+        pthread_create(&threads[i+0], NULL, writeResultsWithParams, resultsParams);
 
         // Run 1
         printf("Running iteration %d\n", i+1);
@@ -258,11 +272,21 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
-        std::thread threadRun1(writeResults, params, field,
-                                             hxBuffer, hyBuffer, hzBuffer,
-                                             dxBuffer, dyBuffer, dzBuffer,
-                                             exBuffer, eyBuffer, ezBuffer,
-                                             i+1, params->outputPath);
+        resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
+        resultsParams->params = params;
+        resultsParams->field = field;
+        resultsParams->hxSource = hxBuffer;
+        resultsParams->hySource = hyBuffer;
+        resultsParams->hzSource = hzBuffer;
+        resultsParams->dxSource = dxBuffer;
+        resultsParams->dySource = dyBuffer;
+        resultsParams->dzSource = dzBuffer;
+        resultsParams->exSource = exBuffer;
+        resultsParams->eySource = eyBuffer;
+        resultsParams->ezSource = ezBuffer;
+        resultsParams->currentIteration = i+1;
+
+        pthread_create(&threads[i+0], NULL, writeResultsWithParams, NULL);
 
         // Run 2
         printf("Running iteration %d\n", i+2);
@@ -347,12 +371,30 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
-        std::thread threadRun2(writeResults, params, field,
-                                             hxBuffer, hyBuffer, hzBuffer,
-                                             dxBuffer, dyBuffer, dzBuffer,
-                                             exBuffer, eyBuffer, ezBuffer,
-                                             i+2, params->outputPath);
+        resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
+        resultsParams->params = params;
+        resultsParams->field = field;
+        resultsParams->hxSource = hxBuffer;
+        resultsParams->hySource = hyBuffer;
+        resultsParams->hzSource = hzBuffer;
+        resultsParams->dxSource = dxBuffer;
+        resultsParams->dySource = dyBuffer;
+        resultsParams->dzSource = dzBuffer;
+        resultsParams->exSource = exBuffer;
+        resultsParams->eySource = eyBuffer;
+        resultsParams->ezSource = ezBuffer;
+        resultsParams->currentIteration = i+2;
+
+        pthread_create(&threads[i+0], NULL, writeResultsWithParams, NULL);
     }
+
+
+    // Wait for all threads to finish
+    for(int i=0; i<params->iterationsCount; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    free(threads);
 
     // Clean up
     /*deallocDeviceField(deviceField);
@@ -990,11 +1032,27 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 }
 
 
+void *writeResultsWithParams(void *params)
+{
+    ResultsParams *resultsParams = (ResultsParams *)params;
+
+    writeResults(resultsParams->params, resultsParams->field,
+                 resultsParams->hxSource, resultsParams->hySource, resultsParams->hzSource,
+                 resultsParams->dxSource, resultsParams->dySource, resultsParams->dzSource,
+                 resultsParams->exSource, resultsParams->eySource, resultsParams->ezSource,
+                 resultsParams->currentIteration);
+
+    free(params);
+
+    pthread_exit(NULL);
+}
+
+
 void writeResults(FdtdParams *params, FdtdField *field,
                   float *hxSource, float *hySource, float *hzSource,
                   float *dxSource, float *dySource, float *dzSource,
                   float *exSource, float *eySource, float *ezSource,
-                  int currentIteration, char *outputPath)
+                  int currentIteration)
 {
     char outputFilePath[1024];
     FILE *outputFile;
@@ -1004,7 +1062,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     int ny = params->ny;
 
     // Output x
-    sprintf(outputFilePath, "%s/E_field_x_%05d.out", outputPath, currentIteration + 1);
+    sprintf(outputFilePath, "%s/E_field_x_%05d.out", params->outputPath, currentIteration + 1);
 
     outputFile = fopen(outputFilePath, "w");
     if(outputFile == NULL) {
@@ -1025,7 +1083,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output y
-    sprintf(outputFilePath, "%s/E_field_y_%05d.out", outputPath, currentIteration + 1);
+    sprintf(outputFilePath, "%s/E_field_y_%05d.out", params->outputPath, currentIteration + 1);
 
     outputFile = fopen(outputFilePath, "w");
     if(outputFile == NULL) {
@@ -1046,7 +1104,7 @@ void writeResults(FdtdParams *params, FdtdField *field,
     fclose(outputFile);
 
     // Output z
-    sprintf(outputFilePath, "%s/E_field_z_%05d.out", outputPath, currentIteration + 1);
+    sprintf(outputFilePath, "%s/E_field_z_%05d.out", params->outputPath, currentIteration + 1);
 
     outputFile = fopen(outputFilePath, "w");
     if(outputFile == NULL) {

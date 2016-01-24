@@ -1,5 +1,5 @@
 CC=nvcc
-CFLAGS=-std=c++11
+CFLAGS=-lpthread
 OUTPUT=fdtd
 SOURCES=fdtd.cu utils.cu fdtd_calculations.cu
 
