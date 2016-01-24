@@ -53,6 +53,24 @@ typedef struct
 } FdtdField;
 
 
+typedef struct
+{
+    FdtdParams *params;
+    FdtdField *field;
+    float *hxSource;
+    float *hySource;
+    float *hzSource;
+    float *dxSource;
+    float *dySource;
+    float *dzSource;
+    float *exSource;
+    float *eySource;
+    float *ezSource;
+    int currentIteration;
+    char *outputPath;
+} ResultParams;
+
+
 FdtdParams *initParamsWithPath(const char *);
 void deallocParams(FdtdParams *);
 void printParams(FdtdParams *params);
@@ -67,7 +85,6 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field);
 void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
 void setupSources(FdtdParams *params);
 void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceField);
-//void copyDataToHost(FdtdParams *params, FdtdField *field, FdtdField *deviceField);
 void writeResults(FdtdParams *params, FdtdField *field,
                   float *hxSource, float *hySource, float *hzSource,
                   float *dxSource, float *dySource, float *dzSource,

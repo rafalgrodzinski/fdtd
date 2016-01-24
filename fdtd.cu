@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <complex.h>
+#include <thread>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -82,6 +83,8 @@ int main(int argc, char **argv)
         float *exBuffer;
         float *eyBuffer;
         float *ezBuffer;
+
+        //ResultParams *resultParams;
 
         // Run 0
         printf("Running iteration %d\n", i);
@@ -166,11 +169,11 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
-        writeResults(params, field,
-                     hxBuffer, hyBuffer, hzBuffer,
-                     dxBuffer, dyBuffer, dzBuffer,
-                     exBuffer, eyBuffer, ezBuffer,
-                     i, params->outputPath);
+        std::thread threadRun0(writeResults, params, field,
+                                             hxBuffer, hyBuffer, hzBuffer,
+                                             dxBuffer, dyBuffer, dzBuffer,
+                                             exBuffer, eyBuffer, ezBuffer,
+                                             i, params->outputPath);
 
         // Run 1
         printf("Running iteration %d\n", i+1);
@@ -255,11 +258,11 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
-        writeResults(params, field,
-                     hxBuffer, hyBuffer, hzBuffer,
-                     dxBuffer, dyBuffer, dzBuffer,
-                     exBuffer, eyBuffer, ezBuffer,
-                     i, params->outputPath);
+        std::thread threadRun1(writeResults, params, field,
+                                             hxBuffer, hyBuffer, hzBuffer,
+                                             dxBuffer, dyBuffer, dzBuffer,
+                                             exBuffer, eyBuffer, ezBuffer,
+                                             i+1, params->outputPath);
 
         // Run 2
         printf("Running iteration %d\n", i+2);
@@ -344,11 +347,11 @@ int main(int argc, char **argv)
         memcpy(eyBuffer, field->ey0, bytesCount);
         memcpy(ezBuffer, field->ez0, bytesCount);
 
-        writeResults(params, field,
-                     hxBuffer, hyBuffer, hzBuffer,
-                     dxBuffer, dyBuffer, dzBuffer,
-                     exBuffer, eyBuffer, ezBuffer,
-                     i, params->outputPath);
+        std::thread threadRun2(writeResults, params, field,
+                                             hxBuffer, hyBuffer, hzBuffer,
+                                             dxBuffer, dyBuffer, dzBuffer,
+                                             exBuffer, eyBuffer, ezBuffer,
+                                             i+2, params->outputPath);
     }
 
     // Clean up
@@ -987,43 +990,6 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 }
 
 
-/*void copyDataToHost(FdtdParams *params, FdtdField *field, FdtdField *deviceField)
-{
-    int n = params->nx * params->ny * params->nz * sizeof(float); 
-
-    //e
-    CHECK(cudaMemcpy(field->ex0, deviceField->ex0, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->ey0, deviceField->ey0, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->ez0, deviceField->ez0, n, cudaMemcpyDeviceToHost))
-                                 
-    CHECK(cudaMemcpy(field->ex1, deviceField->ex1, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->ey1, deviceField->ey1, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->ez1, deviceField->ez1, n, cudaMemcpyDeviceToHost))
-                                 
-    CHECK(cudaMemcpy(field->ex2, deviceField->ex2, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->ey2, deviceField->ey2, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->ez2, deviceField->ez2, n, cudaMemcpyDeviceToHost))
-                                  
-    //h                           
-    CHECK(cudaMemcpy(field->hx, deviceField->hx, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->hy, deviceField->hy, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->hz, deviceField->hz, n, cudaMemcpyDeviceToHost))
-
-    //d
-    CHECK(cudaMemcpy(field->dx0, deviceField->dx0, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->dy0, deviceField->dy0, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->dz0, deviceField->dz0, n, cudaMemcpyDeviceToHost))
-                                 
-    CHECK(cudaMemcpy(field->dx1, deviceField->dx1, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->dy1, deviceField->dy1, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->dz1, deviceField->dz1, n, cudaMemcpyDeviceToHost))
-                                 
-    CHECK(cudaMemcpy(field->dx2, deviceField->dx2, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->dy2, deviceField->dy2, n, cudaMemcpyDeviceToHost))
-    CHECK(cudaMemcpy(field->dz2, deviceField->dz2, n, cudaMemcpyDeviceToHost))
-}*/
-
-
 void writeResults(FdtdParams *params, FdtdField *field,
                   float *hxSource, float *hySource, float *hzSource,
                   float *dxSource, float *dySource, float *dzSource,
@@ -1099,4 +1065,16 @@ void writeResults(FdtdParams *params, FdtdField *field,
         }
     }
     fclose(outputFile);
+
+    free(hxSource);
+    free(hySource);
+    free(hzSource);
+
+    free(dxSource);
+    free(dySource);
+    free(dzSource);
+
+    free(exSource);
+    free(eySource);
+    free(ezSource);
 }

@@ -1,5 +1,5 @@
 CC=nvcc
-CFLAGS=
+CFLAGS=-std=c++11
 OUTPUT=fdtd
 SOURCES=fdtd.cu utils.cu fdtd_calculations.cu
 
