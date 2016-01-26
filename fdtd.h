@@ -2,6 +2,7 @@
 #define FDTD_H
 
 #include <cuda_runtime_api.h>
+#include <pthread.h>
 
 typedef struct
 {
@@ -55,17 +56,32 @@ typedef struct
 
 typedef struct
 {
+    float *xSource;
+    float *ySource;
+    float *zSource;
+
+    float *xBuffer;
+    float *yBuffer;
+    float *zBuffer;
+
+    FdtdParams *params;
+    cudaStream_t stream;
+} CopyParams;
+
+
+typedef struct
+{
     FdtdParams *params;
     FdtdField *field;
-    float *hxSource;
-    float *hySource;
-    float *hzSource;
-    float *dxSource;
-    float *dySource;
-    float *dzSource;
-    float *exSource;
-    float *eySource;
-    float *ezSource;
+
+    CopyParams *hParams;
+    CopyParams *dParams;
+    CopyParams *eParams;
+
+    pthread_t *hThread;
+    pthread_t *dThread;
+    pthread_t *eThread;
+
     int currentIteration;
 } ResultsParams;
 
@@ -84,6 +100,7 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field);
 void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePath, const char *materialsPath);
 void setupSources(FdtdParams *params);
 void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceField);
+void *copyResultsWithParams(void *params);
 void *writeResultsWithParams(void *params);
 void writeResults(FdtdParams *params, FdtdField *field,
                   float *hxSource, float *hySource, float *hzSource,

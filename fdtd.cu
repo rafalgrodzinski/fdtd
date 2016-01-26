@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <complex.h>
-#include <pthread.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -69,17 +68,14 @@ int main(int argc, char **argv)
     int bytesCount = params->nx * params->ny * params->nz * sizeof(float); 
 
     // Threads
-    float *hxBuffer;
-    float *hyBuffer;
-    float *hzBuffer;
+    CopyParams *hCopyParams;
+    CopyParams *dCopyParams;
+    CopyParams *eCopyParams;
 
-    float *dxBuffer;
-    float *dyBuffer;
-    float *dzBuffer;
+    pthread_t *hThread = NULL;
+    pthread_t *dThread = NULL;
+    pthread_t *eThread = NULL;
 
-    float *exBuffer;
-    float *eyBuffer;
-    float *ezBuffer;
     ResultsParams *resultsParams;
     pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
 
@@ -94,6 +90,9 @@ int main(int argc, char **argv)
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
 
+        if(hThread != NULL)
+            pthread_join(*hThread, NULL);
+
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex2, deviceField->ey2, deviceField->ez2);
 
@@ -103,12 +102,21 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
-        hxBuffer = (float *)malloc(bytesCount);
-        hyBuffer = (float *)malloc(bytesCount);
-        hzBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        hCopyParams->xBuffer = field->hx;
+        hCopyParams->yBuffer = field->hy;
+        hCopyParams->zBuffer = field->hz;
+        hCopyParams->stream = streamH;
+
+        hThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
+
+        if(dThread != NULL)
+            pthread_join(*dThread, NULL);
 
         updateDField<<<gridSize, blockSize, 0, streamD>>>(deviceField->dx0, deviceField->dy0, deviceField->dz0, 
                                                           deviceField->dx2, deviceField->dy2, deviceField->dz2, 
@@ -124,12 +132,21 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy0, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz0, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
-        dxBuffer = (float *)malloc(bytesCount);
-        dyBuffer = (float *)malloc(bytesCount);
-        dzBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        dCopyParams->xBuffer = field->dx0;
+        dCopyParams->yBuffer = field->dy0;
+        dCopyParams->zBuffer = field->dz0;
+        dCopyParams->stream = streamD;
+
+        dThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
 
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
+
+        if(eThread != NULL)
+            pthread_join(*eThread, NULL);
 
         updateEField<<<gridSize, blockSize, 0, streamE>>>(deviceField->ex0, deviceField->ey0, deviceField->ez0, 
                                                           deviceField->ex2, deviceField->ey2, deviceField->ez2, 
@@ -150,51 +167,38 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey0, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez0, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
-        exBuffer = (float *)malloc(bytesCount);
-        eyBuffer = (float *)malloc(bytesCount);
-        ezBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        eCopyParams->xBuffer = field->ex0;
+        eCopyParams->yBuffer = field->ey0;
+        eCopyParams->zBuffer = field->ez0;
+        eCopyParams->stream = streamD;
 
-        //Wait for data copy from GPU to finish
-        CHECK(cudaStreamSynchronize(streamH))
-        CHECK(cudaStreamSynchronize(streamD))
-        CHECK(cudaStreamSynchronize(streamE))
+        eThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
-        //Copy results to buffers
-        memcpy(hxBuffer, field->hx, bytesCount);
-        memcpy(hyBuffer, field->hy, bytesCount);
-        memcpy(hzBuffer, field->hz, bytesCount);
-
-        memcpy(dxBuffer, field->dx0, bytesCount);
-        memcpy(dyBuffer, field->dy0, bytesCount);
-        memcpy(dzBuffer, field->dz0, bytesCount);
-
-        memcpy(exBuffer, field->ex0, bytesCount);
-        memcpy(eyBuffer, field->ey0, bytesCount);
-        memcpy(ezBuffer, field->ez0, bytesCount);
-
-        //Setup data for new thread
+        //Spawn write results thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
-        resultsParams->hxSource = hxBuffer;
-        resultsParams->hySource = hyBuffer;
-        resultsParams->hzSource = hzBuffer;
-        resultsParams->dxSource = dxBuffer;
-        resultsParams->dySource = dyBuffer;
-        resultsParams->dzSource = dzBuffer;
-        resultsParams->exSource = exBuffer;
-        resultsParams->eySource = eyBuffer;
-        resultsParams->ezSource = ezBuffer;
-        resultsParams->currentIteration = i+0;
+        resultsParams->hParams = hCopyParams;
+        resultsParams->dParams = dCopyParams;
+        resultsParams->eParams = eCopyParams;
+        resultsParams->hThread = hThread;
+        resultsParams->dThread = dThread;
+        resultsParams->eThread = eThread;
+        resultsParams->currentIteration = i;
 
-        //Spawn new thread to write results
-        pthread_create(&threads[i+0], NULL, writeResultsWithParams, resultsParams);
+        pthread_create(&threads[i], NULL, writeResultsWithParams, resultsParams);
 
         // Run 1
         printf("Running iteration %d\n", i+1);
 
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
+
+        if(hThread != NULL)
+            pthread_join(*hThread, NULL);
 
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex0, deviceField->ey0, deviceField->ez0);
@@ -205,9 +209,15 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
-        hxBuffer = (float *)malloc(bytesCount);
-        hyBuffer = (float *)malloc(bytesCount);
-        hzBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        hCopyParams->xBuffer = field->hx;
+        hCopyParams->yBuffer = field->hy;
+        hCopyParams->zBuffer = field->hz;
+        hCopyParams->stream = streamH;
+
+        hThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
@@ -226,9 +236,15 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy1, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz1, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
-        dxBuffer = (float *)malloc(bytesCount);
-        dyBuffer = (float *)malloc(bytesCount);
-        dzBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        dCopyParams->xBuffer = field->dx0;
+        dCopyParams->yBuffer = field->dy0;
+        dCopyParams->zBuffer = field->dz0;
+        dCopyParams->stream = streamD;
+
+        dThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
  
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
@@ -252,44 +268,28 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey1, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez1, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
-        exBuffer = (float *)malloc(bytesCount);
-        eyBuffer = (float *)malloc(bytesCount);
-        ezBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        eCopyParams->xBuffer = field->ex0;
+        eCopyParams->yBuffer = field->ey0;
+        eCopyParams->zBuffer = field->ez0;
+        eCopyParams->stream = streamD;
 
-        //Wait for data copy from GPU to finish
-        CHECK(cudaStreamSynchronize(streamH))
-        CHECK(cudaStreamSynchronize(streamD))
-        CHECK(cudaStreamSynchronize(streamE))
+        eThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
-        //Copy results to buffers
-        memcpy(hxBuffer, field->hx, bytesCount);
-        memcpy(hyBuffer, field->hy, bytesCount);
-        memcpy(hzBuffer, field->hz, bytesCount);
-
-        memcpy(dxBuffer, field->dx0, bytesCount);
-        memcpy(dyBuffer, field->dy0, bytesCount);
-        memcpy(dzBuffer, field->dz0, bytesCount);
-
-        memcpy(exBuffer, field->ex0, bytesCount);
-        memcpy(eyBuffer, field->ey0, bytesCount);
-        memcpy(ezBuffer, field->ez0, bytesCount);
-
-        //Setup data for new thread
+        //Spawn write results thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
-        resultsParams->hxSource = hxBuffer;
-        resultsParams->hySource = hyBuffer;
-        resultsParams->hzSource = hzBuffer;
-        resultsParams->dxSource = dxBuffer;
-        resultsParams->dySource = dyBuffer;
-        resultsParams->dzSource = dzBuffer;
-        resultsParams->exSource = exBuffer;
-        resultsParams->eySource = eyBuffer;
-        resultsParams->ezSource = ezBuffer;
+        resultsParams->hParams = hCopyParams;
+        resultsParams->dParams = dCopyParams;
+        resultsParams->eParams = eCopyParams;
+        resultsParams->hThread = hThread;
+        resultsParams->dThread = dThread;
+        resultsParams->eThread = eThread;
         resultsParams->currentIteration = i+1;
 
-        //Spawn new thread to write results
         pthread_create(&threads[i+1], NULL, writeResultsWithParams, resultsParams);
 
         // Run 2
@@ -297,6 +297,9 @@ int main(int argc, char **argv)
 
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
+
+        if(hThread != NULL)
+            pthread_join(*hThread, NULL);
 
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex1, deviceField->ey1, deviceField->ez1);
@@ -307,12 +310,21 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
-        hxBuffer = (float *)malloc(bytesCount);
-        hyBuffer = (float *)malloc(bytesCount);
-        hzBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        hCopyParams->xBuffer = field->hx;
+        hCopyParams->yBuffer = field->hy;
+        hCopyParams->zBuffer = field->hz;
+        hCopyParams->stream = streamH;
+
+        hThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
+
+        if(dThread != NULL)
+            pthread_join(*dThread, NULL);
 
         updateDField<<<gridSize, blockSize, 0, streamD>>>(deviceField->dx2, deviceField->dy2, deviceField->dz2, 
                                                           deviceField->dx1, deviceField->dy1, deviceField->dz1, 
@@ -328,12 +340,21 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->dy0, deviceField->dy2, bytesCount, cudaMemcpyDeviceToHost, streamD))
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz2, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
-        dxBuffer = (float *)malloc(bytesCount);
-        dyBuffer = (float *)malloc(bytesCount);
-        dzBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        dCopyParams->xBuffer = field->dx0;
+        dCopyParams->yBuffer = field->dy0;
+        dCopyParams->zBuffer = field->dz0;
+        dCopyParams->stream = streamD;
+
+        dThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
             
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
+
+        if(eThread != NULL)
+            pthread_join(*eThread, NULL);
 
         updateEField<<<gridSize, blockSize, 0, streamE>>>(deviceField->ex2, deviceField->ey2, deviceField->ez2, 
                                                           deviceField->ex1, deviceField->ey1, deviceField->ez1, 
@@ -354,44 +375,28 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ey0, deviceField->ey2, bytesCount, cudaMemcpyDeviceToHost, streamE))
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez2, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
-        exBuffer = (float *)malloc(bytesCount);
-        eyBuffer = (float *)malloc(bytesCount);
-        ezBuffer = (float *)malloc(bytesCount);
+        // Spawn copy thread
+        eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        eCopyParams->xBuffer = field->ex0;
+        eCopyParams->yBuffer = field->ey0;
+        eCopyParams->zBuffer = field->ez0;
+        eCopyParams->stream = streamD;
 
-        //Wait for data copy from GPU to finish
-        CHECK(cudaStreamSynchronize(streamH))
-        CHECK(cudaStreamSynchronize(streamD))
-        CHECK(cudaStreamSynchronize(streamE))
+        eThread = (pthread_t *)malloc(sizeof(pthread_t));
+        pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
-        //Copy results to buffers
-        memcpy(hxBuffer, field->hx, bytesCount);
-        memcpy(hyBuffer, field->hy, bytesCount);
-        memcpy(hzBuffer, field->hz, bytesCount);
-
-        memcpy(dxBuffer, field->dx0, bytesCount);
-        memcpy(dyBuffer, field->dy0, bytesCount);
-        memcpy(dzBuffer, field->dz0, bytesCount);
-
-        memcpy(exBuffer, field->ex0, bytesCount);
-        memcpy(eyBuffer, field->ey0, bytesCount);
-        memcpy(ezBuffer, field->ez0, bytesCount);
-
-        //Setup data for new thread
+        //Spawn write results thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
-        resultsParams->hxSource = hxBuffer;
-        resultsParams->hySource = hyBuffer;
-        resultsParams->hzSource = hzBuffer;
-        resultsParams->dxSource = dxBuffer;
-        resultsParams->dySource = dyBuffer;
-        resultsParams->dzSource = dzBuffer;
-        resultsParams->exSource = exBuffer;
-        resultsParams->eySource = eyBuffer;
-        resultsParams->ezSource = ezBuffer;
+        resultsParams->hParams = hCopyParams;
+        resultsParams->dParams = dCopyParams;
+        resultsParams->eParams = eCopyParams;
+        resultsParams->hThread = hThread;
+        resultsParams->dThread = dThread;
+        resultsParams->eThread = eThread;
         resultsParams->currentIteration = i+2;
 
-        //Spawn new thread to write results
         pthread_create(&threads[i+2], NULL, writeResultsWithParams, resultsParams);
     }
 
@@ -989,15 +994,54 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 }
 
 
+void *copyResultsWithParams(void *params)
+{
+    CopyParams *copyParams = (CopyParams *)params;
+
+    int bytesCount = copyParams->params->nx * copyParams->params->ny * copyParams->params->nz * sizeof(float);
+
+    copyParams->xBuffer = (float *)malloc(bytesCount);
+    copyParams->yBuffer = (float *)malloc(bytesCount);
+    copyParams->zBuffer = (float *)malloc(bytesCount);
+
+    CHECK(cudaStreamSynchronize(copyParams->stream))
+
+    memcpy(copyParams->xBuffer, copyParams->xSource, bytesCount);
+    memcpy(copyParams->yBuffer, copyParams->ySource, bytesCount);
+    memcpy(copyParams->zBuffer, copyParams->zSource, bytesCount);
+
+    pthread_exit(NULL);
+}
+
+
 void *writeResultsWithParams(void *params)
 {
     ResultsParams *resultsParams = (ResultsParams *)params;
 
+    pthread_join(*resultsParams->hThread, NULL);
+    pthread_join(*resultsParams->dThread, NULL);
+    pthread_join(*resultsParams->eThread, NULL);
+
     writeResults(resultsParams->params, resultsParams->field,
-                 resultsParams->hxSource, resultsParams->hySource, resultsParams->hzSource,
-                 resultsParams->dxSource, resultsParams->dySource, resultsParams->dzSource,
-                 resultsParams->exSource, resultsParams->eySource, resultsParams->ezSource,
+                 resultsParams->hParams->xBuffer, resultsParams->hParams->yBuffer, resultsParams->hParams->zBuffer,
+                 resultsParams->dParams->xBuffer, resultsParams->dParams->yBuffer, resultsParams->dParams->zBuffer,
+                 resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
                  resultsParams->currentIteration);
+
+    free(resultsParams->hParams->xBuffer);
+    free(resultsParams->hParams->yBuffer);
+    free(resultsParams->hParams->zBuffer);
+    free(resultsParams->hParams);
+
+    free(resultsParams->dParams->xBuffer);
+    free(resultsParams->dParams->yBuffer);
+    free(resultsParams->dParams->zBuffer);
+    free(resultsParams->dParams);
+
+    free(resultsParams->eParams->xBuffer);
+    free(resultsParams->eParams->yBuffer);
+    free(resultsParams->eParams->zBuffer);
+    free(resultsParams->eParams);
 
     free(params);
 
