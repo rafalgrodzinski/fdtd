@@ -104,9 +104,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        hCopyParams->xBuffer = field->hx;
-        hCopyParams->yBuffer = field->hy;
-        hCopyParams->zBuffer = field->hz;
+        hCopyParams->xSource = field->hx;
+        hCopyParams->ySource = field->hy;
+        hCopyParams->zSource = field->hz;
+        hCopyParams->params = params;
         hCopyParams->stream = streamH;
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -134,9 +135,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        dCopyParams->xBuffer = field->dx0;
-        dCopyParams->yBuffer = field->dy0;
-        dCopyParams->zBuffer = field->dz0;
+        dCopyParams->xSource = field->dx0;
+        dCopyParams->ySource = field->dy0;
+        dCopyParams->zSource = field->dz0;
+        dCopyParams->params = params;
         dCopyParams->stream = streamD;
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -169,9 +171,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        eCopyParams->xBuffer = field->ex0;
-        eCopyParams->yBuffer = field->ey0;
-        eCopyParams->zBuffer = field->ez0;
+        eCopyParams->xSource = field->ex0;
+        eCopyParams->ySource = field->ey0;
+        eCopyParams->zSource = field->ez0;
+        eCopyParams->params = params;
         eCopyParams->stream = streamD;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -211,9 +214,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        hCopyParams->xBuffer = field->hx;
-        hCopyParams->yBuffer = field->hy;
-        hCopyParams->zBuffer = field->hz;
+        hCopyParams->xSource = field->hx;
+        hCopyParams->ySource = field->hy;
+        hCopyParams->zSource = field->hz;
+        hCopyParams->params = params;
         hCopyParams->stream = streamH;
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -238,9 +242,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        dCopyParams->xBuffer = field->dx0;
-        dCopyParams->yBuffer = field->dy0;
-        dCopyParams->zBuffer = field->dz0;
+        dCopyParams->xSource = field->dx0;
+        dCopyParams->ySource = field->dy0;
+        dCopyParams->zSource = field->dz0;
+        dCopyParams->params = params;
         dCopyParams->stream = streamD;
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -270,9 +275,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        eCopyParams->xBuffer = field->ex0;
-        eCopyParams->yBuffer = field->ey0;
-        eCopyParams->zBuffer = field->ez0;
+        eCopyParams->xSource = field->ex0;
+        eCopyParams->ySource = field->ey0;
+        eCopyParams->zSource = field->ez0;
+        eCopyParams->params = params;
         eCopyParams->stream = streamD;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -312,9 +318,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        hCopyParams->xBuffer = field->hx;
-        hCopyParams->yBuffer = field->hy;
-        hCopyParams->zBuffer = field->hz;
+        hCopyParams->xSource = field->hx;
+        hCopyParams->ySource = field->hy;
+        hCopyParams->zSource = field->hz;
+        hCopyParams->params = params;
         hCopyParams->stream = streamH;
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -342,9 +349,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        dCopyParams->xBuffer = field->dx0;
-        dCopyParams->yBuffer = field->dy0;
-        dCopyParams->zBuffer = field->dz0;
+        dCopyParams->xSource = field->dx0;
+        dCopyParams->ySource = field->dy0;
+        dCopyParams->zSource = field->dz0;
+        dCopyParams->params = params;
         dCopyParams->stream = streamD;
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -377,9 +385,10 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
-        eCopyParams->xBuffer = field->ex0;
-        eCopyParams->yBuffer = field->ey0;
-        eCopyParams->zBuffer = field->ez0;
+        eCopyParams->xSource = field->ex0;
+        eCopyParams->ySource = field->ey0;
+        eCopyParams->zSource = field->ez0;
+        eCopyParams->params = params;
         eCopyParams->stream = streamD;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -1028,19 +1037,8 @@ void *writeResultsWithParams(void *params)
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
                  resultsParams->currentIteration);
 
-    free(resultsParams->hParams->xBuffer);
-    free(resultsParams->hParams->yBuffer);
-    free(resultsParams->hParams->zBuffer);
     free(resultsParams->hParams);
-
-    free(resultsParams->dParams->xBuffer);
-    free(resultsParams->dParams->yBuffer);
-    free(resultsParams->dParams->zBuffer);
     free(resultsParams->dParams);
-
-    free(resultsParams->eParams->xBuffer);
-    free(resultsParams->eParams->yBuffer);
-    free(resultsParams->eParams->zBuffer);
     free(resultsParams->eParams);
 
     free(params);
