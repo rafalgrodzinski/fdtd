@@ -416,7 +416,7 @@ int main(int argc, char **argv)
     }
 
     // Clean up
-    free(threads);
+    //free(threads);
 
     deallocDeviceField(deviceField);
     deallocField(field);

@@ -89,13 +89,17 @@ __global__ void updateDField(float *dxTarget, float *dyTarget, float *dzTarget,
     int iy = threadIdx.y + blockIdx.y * blockDim.y;
     int iz = threadIdx.z + blockIdx.z * blockDim.z;
 
+    float x = dDt/dDx;
+    float y = dDt/dDy;
+    float z = dDt/dDz;
+
     // Update dDx
     if(ix >= 0 && ix < nx-1 &&
        iy >= 1 && iy < ny-1 &&
        iz >= 1 && iz < nz-1) {
         OFFSET(dxTarget, ix, iy, iz) = OFFSET(dxSource, ix, iy, iz) +
-                                       dDt/dDy * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix, iy-1, iz)) -
-                                       dDt/dDz * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix, iy, iz-1));
+                                       y * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix, iy-1, iz)) -
+                                       z * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix, iy, iz-1));
     }
     
     // Update dDy
@@ -103,8 +107,8 @@ __global__ void updateDField(float *dxTarget, float *dyTarget, float *dzTarget,
        iy >= 0 && iy < ny-1 &&
        iz >= 1 && iz < nz-1) {
         OFFSET(dyTarget, ix, iy, iz) = OFFSET(dySource, ix, iy, iz) +
-                                       dDt/dDz * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy, iz-1)) -
-                                       dDt/dDx * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix-1, iy, iz));
+                                       z * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy, iz-1)) -
+                                       x * (OFFSET(hz, ix, iy, iz) - OFFSET(hz, ix-1, iy, iz));
     }
     
     // Update dDz
@@ -112,8 +116,8 @@ __global__ void updateDField(float *dxTarget, float *dyTarget, float *dzTarget,
        iy >= 1 && iy < ny-1 &&
        iz >= 0 && iz < nz-1) {
             OFFSET(dzTarget, ix, iy, iz) = OFFSET(dzSource, ix, iy, iz) +
-                                           dDt/dDx * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix-1, iy, iz)) -
-                                           dDt/dDy * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy-1, iz));
+                                           x * (OFFSET(hy, ix, iy, iz) - OFFSET(hy, ix-1, iy, iz)) -
+                                           y * (OFFSET(hx, ix, iy, iz) - OFFSET(hx, ix, iy-1, iz));
     }
 }
 
