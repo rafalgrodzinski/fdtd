@@ -550,13 +550,13 @@ void printParams(FdtdParams *params)
     cudaGetDeviceProperties(&deviceProp, 0);
 
     printf("Running on %s\n", deviceProp.name);
-    printf("Compute capability: %d.%d", deviceProp.major, deviceProp.minor);
-    printf("Memory available: %.2f", deviceProp.totalGlobalMem / (1024.0 * 1024.0));
+    printf("Compute capability: %d.%d\n", deviceProp.major, deviceProp.minor);
+    printf("Memory available: %.2f MB\n", deviceProp.totalGlobalMem / (1024.0 * 1024.0));
 
     int usedBytes = params->nx * params->ny * params->nz;
     usedBytes *= 7 * 3 + 10; // e1, e2, e3, h, d0, d1, d2, d3, eps, tau, sigma, rp, etc...
     usedBytes *= sizeof(float);
-    printf("Memory requirements: %.2f MB", (float)usedBytes / (1024.0 * 1024.0));
+    printf("Memory required: %.2f MB\n\n", (float)usedBytes / (1024.0 * 1024.0));
 }
 
 
