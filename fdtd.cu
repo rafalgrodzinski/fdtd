@@ -545,6 +545,18 @@ void printParams(FdtdParams *params)
     printf("Default eps_i:              %9.3E\n", params->defaultEpsI);
     printf("Default tau_d:              %9.3E\n", params->defaultTauD);
     printf("\n");
+
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, 0);
+
+    printf("Running on %s\n", deviceProp.name);
+    printf("Compute capability: %d.%d", deviceProp.major, deviceProp.minor);
+    printf("Memory available: %.2f", deviceProp.totalGlobalMem / (1024.0 * 1024.0));
+
+    int usedBytes = params->nx * params->ny * params->nz;
+    usedBytes *= 7 * 3 + 10; // e1, e2, e3, h, d0, d1, d2, d3, eps, tau, sigma, rp, etc...
+    usedBytes *= sizeof(float);
+    printf("Memory requirements: %.2f MB", (float)usedBytes / (1024.0 * 1024.0));
 }
 
 
@@ -1059,69 +1071,188 @@ void writeResults(FdtdParams *params, FdtdField *field,
     // Used by OFFSET macro
     int nx = params->nx;
     int ny = params->ny;
+    int nz = params->nz;
 
-    // Output x
-    sprintf(outputFilePath, "%s/E_field_x_%05d.out", params->outputPath, currentIteration + 1);
+    // Output hx
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/H_field_x_%05d_z%05d.out", params->outputPath, currentIteration, iz);
 
-    outputFile = fopen(outputFilePath, "w");
-    if(outputFile == NULL) {
-        printf("Couldn\'t open file %s\n", outputFilePath);
-        exit(EXIT_FAILURE);
-    }
-
-    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
-        int iy = params->sources[isrc * 3 + 1];
-        int iz = params->sources[isrc * 3 + 2];
-        for(int ix=0; ix < params->nx; ix++) {
-            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
-                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
-                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
-                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
         }
-    }
-    fclose(outputFile);
 
-    // Output y
-    sprintf(outputFilePath, "%s/E_field_y_%05d.out", params->outputPath, currentIteration + 1);
-
-    outputFile = fopen(outputFilePath, "w");
-    if(outputFile == NULL) {
-        printf("Couldn\'t open file %s\n", outputFilePath);
-        exit(EXIT_FAILURE);
-    }
-
-    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
-        int ix = params->sources[isrc * 3 + 0];
-        int iz = params->sources[isrc * 3 + 2];
-        for(int iy=0; iy < params->ny; iy++) {
-            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
-                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
-                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
-                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(hxSource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
         }
-    }
-    fclose(outputFile);
 
-    // Output z
-    sprintf(outputFilePath, "%s/E_field_z_%05d.out", params->outputPath, currentIteration + 1);
-
-    outputFile = fopen(outputFilePath, "w");
-    if(outputFile == NULL) {
-        printf("Couldn\'t open file %s\n", outputFilePath);
-        exit(EXIT_FAILURE);
+        fclose(outputFile);
     }
 
-    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
-        int ix = params->sources[isrc * 3 + 0];
-        int iy = params->sources[isrc * 3 + 1];
-        for(int iz=0; iz < params->nz; iz++) {
-            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
-                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
-                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
-                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
+    // Output hy
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/H_field_y_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
         }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(hySource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
     }
-    fclose(outputFile);
+
+    // Output hz
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/H_field_z_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(hzSource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
+    // Output dx
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/D_field_x_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(dxSource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
+    // Output dy
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/D_field_y_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(dySource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
+    // Output dz
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/D_field_z_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(dzSource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
+    // Output ex
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/E_field_x_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(exSource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
+    // Output ey
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/E_field_y_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(eySource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
+    // Output ez
+    for(int iz = 0; iz < params->nz; iz++) {
+        sprintf(outputFilePath, "%s/E_field_z_%05d_z%05d.out", params->outputPath, currentIteration, iz);
+
+        outputFile = fopen(outputFilePath, "w");
+        if(outputFile == NULL) {
+            printf("Couldn\'t open file %s\n", outputFilePath);
+            exit(EXIT_FAILURE);
+        }
+
+        for(int iy = 0; iy < params->ny; iy++) {
+            for(int ix=0; ix < params->nx; ix++)
+                fprintf(outputFile, "% 9.3E", OFFSET(ezSource, ix, iy, iz));
+            
+            fprintf(outputFile, "\n");
+        }
+
+        fclose(outputFile);
+    }
+
 
     //Cleanup unnecessary buffers
     free(hxSource);
