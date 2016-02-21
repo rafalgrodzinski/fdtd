@@ -556,7 +556,10 @@ void printParams(FdtdParams *params)
     int usedBytes = params->nx * params->ny * params->nz;
     usedBytes *= 7 * 3 + 10; // e1, e2, e3, h, d0, d1, d2, d3, eps, tau, sigma, rp, etc...
     usedBytes *= sizeof(float);
-    printf("Memory required: %.2f MB\n\n", (float)usedBytes / (1024.0 * 1024.0));
+    printf("Memory required: %.2f MB\n", (float)usedBytes / (1024.0 * 1024.0));
+
+    int bytesProduces = params->nx * params->ny * params->nz;
+    bytesProduced *= 10 * 9
 }
 
 
