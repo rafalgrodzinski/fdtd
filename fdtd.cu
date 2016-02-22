@@ -551,12 +551,11 @@ void printParams(FdtdParams *params)
 
     printf("Running on %s\n", deviceProp.name);
     printf("Compute capability: %d.%d", deviceProp.major, deviceProp.minor);
-    printf("Memory available: %.2f", deviceProp.totalGlobalMem / (1024.0 * 1024.0));
 
-    int usedBytes = params->nx * params->ny * params->nz;
-    usedBytes *= 7 * 3 + 10; // e1, e2, e3, h, d0, d1, d2, d3, eps, tau, sigma, rp, etc...
-    usedBytes *= sizeof(float);
-    printf("Memory requirements: %.2f MB", (float)usedBytes / (1024.0 * 1024.0));
+    size_t memFree, memTotal;
+    cudaMemGetInfo(&memFree, &memTotal);
+    printf("Memory available: %.2f MB", (float)memTotal / (1024.0 * 1024.0));
+    printf("Memory used: %.2f MB", (float)(memTotal - memFree) / (1024.0 * 1024.0));
 }
 
 
@@ -1071,7 +1070,6 @@ void writeResults(FdtdParams *params, FdtdField *field,
     // Used by OFFSET macro
     int nx = params->nx;
     int ny = params->ny;
-    int nz = params->nz;
 
     // Output hx
     for(int iz = 0; iz < params->nz; iz++) {
