@@ -703,13 +703,13 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     CHECK(cudaMalloc(&field->sigma, n * sizeof(float)))
 
     // rp
-    CHECK(cudaMalloc(&field->rpx0, n * sizeof(float)))
-    CHECK(cudaMalloc(&field->rpy0, n * sizeof(float)))
-    CHECK(cudaMalloc(&field->rpz0, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpx0, 2 * params->ny * params->nz * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpy0, params->nx * 2 * params->nz * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpz0, params->nx * params->ny * 2 * sizeof(float)))
 
-    CHECK(cudaMalloc(&field->rpxEnd, n * sizeof(float)))
-    CHECK(cudaMalloc(&field->rpyEnd, n * sizeof(float)))
-    CHECK(cudaMalloc(&field->rpzEnd, n * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpxEnd, 2 * params->ny * params->nz * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpyEnd, params->nx * 2 * params->nz * sizeof(float)))
+    CHECK(cudaMalloc(&field->rpzEnd, params->nx * params->ny * 2 * sizeof(float)))
 
     return field;
 }

@@ -222,49 +222,60 @@ __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTar
     int ny = dNy;
     int nz = dNz;
 
+    int rpnx, rpny;
+
     int ix = threadIdx.x + blockIdx.x * blockDim.x;
     int iy = threadIdx.y + blockIdx.y * blockDim.y;
     int iz = threadIdx.z + blockIdx.z * blockDim.z;
-
+    
     // Update ex
-    if(ix >= 0  && ix < nx-1 && 
+
+    // for rpy
+    rpnx = dNx;
+    rpny = 2;
+
+    if(ix >= 0 && ix < nx-1 && 
        iy == 0 && 
-       iz >= 1  && iz < nz-1) {
-        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy, iz))) *  
+       iz >= 1 && iz < nz-1) {
+        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 0, iz))) *  
                                        (                                                        
-                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 1, iz))) * 
                                         OFFSET(exTarget, ix, iy+1, iz) +                               
-                                        (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 1, iz))) * 
                                         OFFSET(exSource, ix, iy+1, iz) -                               
-                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy, iz))) *    
+                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 0, iz))) *    
                                         OFFSET(exSource, ix, iy, iz)                                   
                                        );
     }
 
-    if(ix >= 0     && ix < nx-1 && 
+    if(ix >= 0    && ix < nx-1 && 
        iy == ny-1 && 
-       iz >= 1     && iz < nz-1) {
-        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy, iz))) *  
+       iz >= 1    && iz < nz-1) {
+        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 1, iz))) *  
                                        (                                                          
-                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 0, iz))) * 
                                         OFFSET(exTarget, ix, iy-1, iz) +                                 
-                                        (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                        (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 0, iz))) * 
                                         OFFSET(exSource, ix, iy-1, iz) -                                 
-                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy, iz))) *   
+                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 1, iz))) *   
                                         OFFSET(exSource, ix, iy, iz)                                     
                                        );
     }
 
+    // for rpz
+    rpnx = dNx;
+    rpny = dNy;
+
     if(ix >= 0 && ix < nx-1 && 
        iy >= 1 && iy < ny-1 && 
        iz == 0) {
-        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz))) *  
+        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 0))) *  
                                        (                                                        
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 1))) * 
                                         OFFSET(exTarget, ix, iy, iz+1) +                               
-                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 1))) * 
                                         OFFSET(exSource, ix, iy, iz+1) -                               
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz))) *   
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 0))) *   
                                         OFFSET(exSource, ix, iy, iz)                                   
                                        );
     }
@@ -272,28 +283,33 @@ __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTar
     if(ix >= 0 && ix < nx-1 && 
        iy >= 1 && iy < ny-1 && 
        iz == nz-1) {
-        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz))) *  
+        OFFSET(exTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 1))) *  
                                        (                                                          
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 0))) * 
                                         OFFSET(exTarget, ix, iy, iz-1) +                                 
-                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 0))) * 
                                         OFFSET(exSource, ix, iy, iz-1) -                                 
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz))) *   
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 1))) *   
                                         OFFSET(exSource, ix, iy, iz)                                     
                                        );
     }
 
     // Update ey
+
+    // for rpx
+    rpnx = 2;
+    rpny = dNy;
+
     if(ix == 0 && 
        iy >= 0  && iy < ny-1 && 
        iz >= 1  && iz < nz-1) {
-        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix, iy, iz))) *  
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 0, iy, iz))) *  
                                        (                                                        
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 1, iy, iz))) * 
                                         OFFSET(eyTarget, ix+1, iy, iz) +                               
-                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 1, iy, iz))) * 
                                         OFFSET(eySource, ix+1, iy, iz) -                               
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix, iy, iz))) *   
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 0, iy, iz))) *   
                                         OFFSET(eySource, ix, iy, iz)                                   
                                        );
     }
@@ -301,27 +317,31 @@ __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTar
     if(ix == nx-1 && 
        iy >= 0     && iy < ny-1 && 
        iz >= 1     && iz < nz-1) {
-        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix, iy, iz)))  * 
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 1, iy, iz)))  * 
                                        (                                                          
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 0, iy, iz))) * 
                                         OFFSET(eySource, ix-1, iy, iz) +                                 
-                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 0, iy, iz))) * 
                                         OFFSET(eySource, ix-1, iy, iz) -                                 
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix, iy, iz))) *   
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 1, iy, iz))) *   
                                         OFFSET(eySource, ix, iy, iz)                                     
                                        );
     }
 
+    // for rpz
+    rpnx = dNx;
+    rpny = dNy;
+
     if(ix >= 1 && ix < nx-1 && 
        iy >= 0 && iy < ny-1 && 
        iz == 0) {
-        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz))) *  
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 0))) *  
                                        (                                                        
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 1))) * 
                                         OFFSET(eyTarget, ix, iy,iz+1) +                                
-                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz+1))) * 
+                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 1))) * 
                                         OFFSET(eySource, ix, iy, iz+1) -                               
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpz0, ix, iy, iz))) *   
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpz0, ix, iy, 0))) *   
                                         OFFSET(eySource, ix, iy, iz)                                   
                                        );
     }
@@ -329,28 +349,33 @@ __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTar
     if(ix >= 1 && ix < nx-1 && 
        iy >= 0 && iy < ny-1 && 
        iz == nz-1) {
-        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz))) *  
+        OFFSET(eyTarget, ix, iy, iz) = 1/(dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 1))) *  
                                        (                                                          
-                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        (dDt - dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 0))) * 
                                         OFFSET(eyTarget, ix, iy, iz-1) +                                 
-                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz-1))) * 
+                                        (dDt + dDz * sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 0))) * 
                                         OFFSET(eySource, ix, iy, iz-1) -                                 
-                                        (dDt - dDz *sqrt(dMu0 * dEps0 * OFFSET(rpzEnd, ix, iy, iz))) *    
+                                        (dDt - dDz *sqrt(dMu0 * dEps0 * OFFSETRP(rpzEnd, ix, iy, 1))) *    
                                         OFFSET(eySource, ix, iy, iz)                                     
                                        );
     }
 
     // Update ez
+
+    // for rpz
+    rpnx = 2;
+    rpny = dNy;
+
     if(ix == 0 && 
        iy >= 1  && iy < ny-1 && 
        iz >= 0  && iz < nz-1) {
-        OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix, iy, iz))) *  
+        OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 0, iy, iz))) *  
                                        (                                                        
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 1, iy, iz))) * 
                                         OFFSET(ezTarget, ix+1, iy, iz) +                               
-                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix+1, iy, iz))) * 
+                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 1, iy, iz))) * 
                                         OFFSET(ezSource, ix+1, iy, iz) -                                
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpx0, ix, iy, iz)))  *  
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpx0, 0, iy, iz)))  *  
                                         OFFSET(ezSource, ix, iy, iz)                                   
                                        );
     }
@@ -358,27 +383,31 @@ __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTar
     if(ix == nx-1 && 
        iy >= 1     && iy < ny-1 && 
        iz >= 0     && iz < nz-1) {
-        OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix, iy, iz))) *  
+        OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 1, iy, iz))) *  
                                        (                                                          
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 0, iy, iz))) * 
                                         OFFSET(ezTarget, ix-1, iy, iz) +                                 
-                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix-1, iy, iz))) * 
+                                        (dDt + dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 0, iy, iz))) * 
                                         OFFSET(ezSource, ix-1, iy, iz) -                                 
-                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSET(rpxEnd, ix, iy, iz))) *   
+                                        (dDt - dDx * sqrt(dMu0 * dEps0 * OFFSETRP(rpxEnd, 1, iy, iz))) *   
                                         OFFSET(ezSource, ix, iy, iz)                                     
                                        );
     }
+
+    // for rpy
+    rpnx = dNx;
+    rpny = 2;
     
     if(ix >= 1  && ix < nx-1 && 
        iy == 0 && 
        iz >= 0  && iz < nz-1) { 
-        OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy, iz))) *  
+        OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 0, iz))) *  
                                        (                                                        
-                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 1, iz))) * 
                                         OFFSET(ezTarget, ix, iy+1, iz) +                                
-                                        (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy+1, iz))) * 
+                                        (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 1, iz))) * 
                                         OFFSET(ezSource, ix, iy+1, iz) -                               
-                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpy0, ix, iy, iz))) *   
+                                        (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpy0, ix, 0, iz))) *   
                                         OFFSET(ezSource, ix, iy, iz)                                   
                                        );
     }
@@ -386,13 +415,13 @@ __global__ void updateMurBoundary(float *exTarget, float *eyTarget, float *ezTar
     if(ix >= 1     && ix < nx-1 && 
        iy == ny-1 && 
        iz >= 0     && iz < nz-1) { 
-            OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy, iz))) *  
+            OFFSET(ezTarget, ix, iy, iz) = 1/(dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 1, iz))) *  
                                            (                                                          
-                                            (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                            (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 0, iz))) * 
                                             OFFSET(ezTarget, ix, iy-1, iz) +                                 
-                                            (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy-1, iz))) * 
+                                            (dDt + dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 0, iz))) * 
                                             OFFSET(ezSource, ix, iy-1, iz) -                                 
-                                            (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSET(rpyEnd, ix, iy, iz))) *   
+                                            (dDt - dDy * sqrt(dMu0 * dEps0 * OFFSETRP(rpyEnd, ix, 1, iz))) *   
                                             OFFSET(ezSource, ix, iy, iz)                                     
                                            );
     }
