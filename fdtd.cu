@@ -585,11 +585,6 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     CHECK(cudaHostAlloc(&field->ez0, n * sizeof(float), cudaHostAllocDefault))
 
     // sigma, eps, tau
-    //CHECK(cudaHostAlloc(&field->sigma, n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->epsS,  n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->epsI,  n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->tauD,  n * sizeof(float), cudaHostAllocDefault))
-    
     field->sigma = (float *)malloc( n * sizeof(float));
     field->epsS  = (float *)malloc( n * sizeof(float));
     field->epsI  = (float *)malloc( n * sizeof(float));
@@ -603,21 +598,13 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     }
 
     // rp
-    //CHECK(cudaHostAlloc(&field->rpx0, n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->rpy0, n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->rpz0, n * sizeof(float), cudaHostAllocDefault))
+    field->rpx0 = (float *)malloc(2 * params->ny * params->nz * sizeof(float));
+    field->rpy0 = (float *)malloc(params->nx * 2 * params->nz * sizeof(float)); 
+    field->rpz0 = (float *)malloc(params->nx * params->ny * 2 * sizeof(float)); 
 
-    //CHECK(cudaHostAlloc(&field->rpxEnd, n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->rpyEnd, n * sizeof(float), cudaHostAllocDefault))
-    //CHECK(cudaHostAlloc(&field->rpzEnd, n * sizeof(float), cudaHostAllocDefault))
-
-    field->rpx0 = (float *)malloc(n * sizeof(float));
-    field->rpy0 = (float *)malloc(n * sizeof(float)); 
-    field->rpz0 = (float *)malloc(n * sizeof(float)); 
-
-    field->rpxEnd = (float *)malloc(n * sizeof(float));
-    field->rpyEnd = (float *)malloc(n * sizeof(float));
-    field->rpzEnd = (float *)malloc(n * sizeof(float));  
+    field->rpxEnd = (float *)malloc(2 * params->ny * params->nz * sizeof(float));
+    field->rpyEnd = (float *)malloc(params->nx * 2 * params->nz * sizeof(float));
+    field->rpzEnd = (float *)malloc(params->nx * params->ny * 2 * sizeof(float));  
 
     return field;
 }
@@ -1004,13 +991,13 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
     CHECK(cudaMemcpy(deviceField->tauD,  field->tauD,  bytesCount, cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(deviceField->sigma, field->sigma, bytesCount, cudaMemcpyHostToDevice))
 
-    CHECK(cudaMemcpy(deviceField->rpx0, field->rpx0, bytesCount, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpy0, field->rpy0, bytesCount, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpz0, field->rpz0, bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpx0, field->rpx0, 2 * params->ny * params->nz * sizeof(float), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpy0, field->rpy0, params->nx * 2 * params->nz * sizeof(float), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpz0, field->rpz0, params->nx * params->ny * 2 * sizeof(float), cudaMemcpyHostToDevice))
 
-    CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, bytesCount, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, bytesCount, cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, bytesCount, cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpxEnd, field->rpxEnd, 2 * params->ny * params->nz * sizeof(float), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpyEnd, field->rpyEnd, params->nx * 2 * params->nz * sizeof(float), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(deviceField->rpzEnd, field->rpzEnd, params->nx * params->ny * 2 * sizeof(float), cudaMemcpyHostToDevice))
 }
 
 
