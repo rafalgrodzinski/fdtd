@@ -550,12 +550,7 @@ void printParams(FdtdParams *params)
     cudaGetDeviceProperties(&deviceProp, 0);
 
     printf("Running on %s\n", deviceProp.name);
-    printf("Compute capability: %d.%d", deviceProp.major, deviceProp.minor);
-
-    size_t memFree, memTotal;
-    cudaMemGetInfo(&memFree, &memTotal);
-    printf("Memory available: %.2f MB", (float)memTotal / (1024.0 * 1024.0));
-    printf("Memory used: %.2f MB", (float)(memTotal - memFree) / (1024.0 * 1024.0));
+    printf("Compute capability: %d.%d\n", deviceProp.major, deviceProp.minor);
 }
 
 
@@ -698,6 +693,11 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
     CHECK(cudaMalloc(&field->rpyEnd, params->nx * 2 * params->nz * sizeof(float)))
     CHECK(cudaMalloc(&field->rpzEnd, params->nx * params->ny * 2 * sizeof(float)))
 
+    size_t memFree, memTotal;
+    cudaMemGetInfo(&memFree, &memTotal);
+    printf("Memory available: %.2f MB\n", (float)memTotal / (1024.0 * 1024.0));
+    printf("Memory used: %.2f MB\n\n", (float)(memTotal - memFree) / (1024.0 * 1024.0));
+
     return field;
 }
 
@@ -826,6 +826,12 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
     int ny = params->ny;
     int nz = params->nz;
 
+    int rpnx;
+    int rpny;
+
+    rpnx = 2;
+    rpny = ny;
+
     // Setup rpx
     for(int iz = 0; iz < nz; iz++) {
         for(int iy = 0; iy < ny; iy++) {
@@ -833,7 +839,7 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
                 float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy,iz);
                 float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0);
 
-                OFFSET(field->rpx0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +
+                OFFSETRP(field->rpx0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +
                                                         (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
 
@@ -841,11 +847,14 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
                 float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz);
                 float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0);
                 
-                OFFSET(field->rpxEnd, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
+                OFFSETRP(field->rpxEnd, ix - (nx-2), iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
                                                           (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
         }
     }
+
+    rpnx = nx;
+    rpny = 2;
 
     // Setup rpy
     for(int iz = 0; iz < nz; iz++) {
@@ -854,7 +863,7 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
                 float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
                 float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) /(2.0 * params->pi * params->waveFrequency * params->eps0) * I;
                 
-                OFFSET(field->rpy0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                      
+                OFFSETRP(field->rpy0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                      
                                                         (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
 
@@ -862,11 +871,14 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
                 float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
                 float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2 * params->pi * params->waveFrequency * params->eps0) * I;
                 
-                OFFSET(field->rpyEnd, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                      
+                OFFSETRP(field->rpyEnd, ix, iy - (ny-2), iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                      
                                                           (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
         }
     }
+
+    rpnx = nx;
+    rpny = ny;
 
     // Setup rpz
     for(int iy = 0; iy < ny; iy++) {
@@ -875,7 +887,7 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
                 float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
                 float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0) * I;
                 
-                OFFSET(field->rpz0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
+                OFFSETRP(field->rpz0, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
                                                         (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
 
@@ -883,7 +895,7 @@ void setupMurBoundary(FdtdParams *params, FdtdField *field)
                 float complex c1 = 0.0 + 2.0 * params->pi * params->waveFrequency * OFFSET(field->tauD, ix, iy, iz) * I;
                 float complex c2 = 0.0 + OFFSET(field->sigma, ix, iy, iz) / (2.0 * params->pi * params->waveFrequency * params->eps0) * I;
                 
-                OFFSET(field->rpzEnd, ix, iy, iz) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
+                OFFSETRP(field->rpzEnd, ix, iy, iz - (nz-2)) = creal(OFFSET(field->epsI, ix, iy, iz) +                                                  
                                                           (OFFSET(field->epsS, ix, iy, iz) - OFFSET(field->epsI, ix, iy, iz)) / (1.0 + c1) - c2);
             }
         }

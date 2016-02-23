@@ -13,7 +13,7 @@
 }
 
 #define OFFSET(p, x, y, z) (p[(z)*ny*nx + (y)*nx + (x)])
-#define OFFSETRP(p, x, y, z) (p[(z)*rpny*nx + (y)*rpnx + (x)])
+#define OFFSETRP(p, x, y, z) (p[(z)*rpny*rpnx + (y)*rpnx + (x)])
 
 void check(int condition, char *message);
 

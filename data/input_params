@@ -1,5 +1,5 @@
 nx_ny_nz: 374 374 374 
-t_max: 12
+t_max: 3
 nf: 1
 env_set_dir: data/pgmdata
 env_file_prefix: "ver"
