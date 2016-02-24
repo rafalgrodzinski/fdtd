@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <complex.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -1019,9 +1020,14 @@ void *copyResultsWithParams(void *params)
 
     int bytesCount = copyParams->params->nx * copyParams->params->ny * copyParams->params->nz * sizeof(float);
 
-    copyParams->xBuffer = (float *)malloc(bytesCount);
-    copyParams->yBuffer = (float *)malloc(bytesCount);
-    copyParams->zBuffer = (float *)malloc(bytesCount);
+    while((copyParams->xBuffer = (float *)malloc(bytesCount)) == NULL)
+        usleep(1000);
+
+    while((copyParams->yBuffer = (float *)malloc(bytesCount)) == NULL)
+        usleep(1000);
+
+    while((copyParams->zBuffer = (float *)malloc(bytesCount)) == NULL)
+        usleep(1000);
 
     CHECK(cudaStreamSynchronize(copyParams->stream))
 
