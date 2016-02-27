@@ -79,6 +79,7 @@ int main(int argc, char **argv)
 
     ResultsParams *resultsParams;
     pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
+    if(threads == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
 
     CHECK(cudaEventRecord(eventE))
 
@@ -105,6 +106,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(hCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         hCopyParams->xSource = field->hx;
         hCopyParams->ySource = field->hy;
         hCopyParams->zSource = field->hz;
@@ -112,6 +114,7 @@ int main(int argc, char **argv)
         hCopyParams->stream = streamH;
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
@@ -136,6 +139,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(dCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         dCopyParams->xSource = field->dx0;
         dCopyParams->ySource = field->dy0;
         dCopyParams->zSource = field->dz0;
@@ -143,6 +147,7 @@ int main(int argc, char **argv)
         dCopyParams->stream = streamD;
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(dThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
 
         // E field
@@ -172,6 +177,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(eCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         eCopyParams->xSource = field->ex0;
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
@@ -179,10 +185,12 @@ int main(int argc, char **argv)
         eCopyParams->stream = streamD;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
+        if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
         resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
@@ -215,6 +223,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(hCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         hCopyParams->xSource = field->hx;
         hCopyParams->ySource = field->hy;
         hCopyParams->zSource = field->hz;
@@ -222,6 +231,7 @@ int main(int argc, char **argv)
         hCopyParams->stream = streamH;
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
@@ -243,6 +253,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(dCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         dCopyParams->xSource = field->dx0;
         dCopyParams->ySource = field->dy0;
         dCopyParams->zSource = field->dz0;
@@ -250,6 +261,7 @@ int main(int argc, char **argv)
         dCopyParams->stream = streamD;
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(dThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
  
         // E field
@@ -276,6 +288,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(eCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         eCopyParams->xSource = field->ex0;
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
@@ -283,10 +296,12 @@ int main(int argc, char **argv)
         eCopyParams->stream = streamD;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
+        if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
         resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
@@ -319,6 +334,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(hCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         hCopyParams->xSource = field->hx;
         hCopyParams->ySource = field->hy;
         hCopyParams->zSource = field->hz;
@@ -326,6 +342,7 @@ int main(int argc, char **argv)
         hCopyParams->stream = streamH;
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
@@ -350,6 +367,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(dCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         dCopyParams->xSource = field->dx0;
         dCopyParams->ySource = field->dy0;
         dCopyParams->zSource = field->dz0;
@@ -357,6 +375,7 @@ int main(int argc, char **argv)
         dCopyParams->stream = streamD;
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(dThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
             
         // E field
@@ -386,6 +405,7 @@ int main(int argc, char **argv)
 
         // Spawn copy thread
         eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
+        if(eCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         eCopyParams->xSource = field->ex0;
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
@@ -393,10 +413,12 @@ int main(int argc, char **argv)
         eCopyParams->stream = streamD;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
+        if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
+        if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
         resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
@@ -816,7 +838,7 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
         fclose(materialFile);
     }
 
-    free(specs);
+    //free(specs);
 }
 
 
@@ -1020,14 +1042,14 @@ void *copyResultsWithParams(void *params)
 
     int bytesCount = copyParams->params->nx * copyParams->params->ny * copyParams->params->nz * sizeof(float);
 
-    while((copyParams->xBuffer = (float *)malloc(bytesCount)) == NULL)
-        usleep(1000);
+    copyParams->xBuffer = (float *)malloc(bytesCount);
+    if(copyParams->xBuffer == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
 
-    while((copyParams->yBuffer = (float *)malloc(bytesCount)) == NULL)
-        usleep(1000);
+    copyParams->yBuffer = (float *)malloc(bytesCount);
+    if(copyParams->yBuffer == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
 
-    while((copyParams->zBuffer = (float *)malloc(bytesCount)) == NULL)
-        usleep(1000);
+    copyParams->zBuffer = (float *)malloc(bytesCount);
+    if(copyParams->zBuffer == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
 
     CHECK(cudaStreamSynchronize(copyParams->stream))
 
