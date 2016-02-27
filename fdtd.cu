@@ -417,7 +417,7 @@ int main(int argc, char **argv)
     }
 
     // Clean up
-    //free(threads);
+    free(threads);
 
     deallocDeviceField(deviceField);
     deallocField(field);
@@ -1056,6 +1056,10 @@ void *writeResultsWithParams(void *params)
     free(resultsParams->hParams);
     free(resultsParams->dParams);
     free(resultsParams->eParams);
+    
+    free(resultsParams->hThread);
+    free(resultsParams->dThread);
+    free(resultsParams->eThread);
 
     free(params);
 
