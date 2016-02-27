@@ -8,43 +8,11 @@
 
 #include "utils.h"
 #include "fdtd_calculations.h"
-#include <malloc/malloc.h>
 
 
 #define BLOCK_X 128
 #define BLOCK_Y 1
 #define BLOCK_Z 1
-
-
-size_t totalMemCount = 0;
-pthread_mutex_t memMutex = PTHREAD_MUTEX_INITIALIZER;
-
-void *smalloc(size_t count)
-{
-    pthread_mutex_lock(&memMutex);
-
-    totalMemCount += count;
-    printf("smalloc: %ld\n", totalMemCount);
-
-    pthread_mutex_unlock(&memMutex);
-
-    return smalloc(count);
-}
-
-
-void sfree(void *pointer)
-{
-    pthread_mutex_lock(&memMutex);
-
-    size_t count = malloc_size(pointer);
-    totalMemCount -= count;
-    printf("sfree: %ld\n", totalMemCount);
-
-    pthread_mutex_unlock(&memMutex);
-
-    sfree(pointer);
-}
-
 
 
 int main(int argc, char **argv)
@@ -110,7 +78,7 @@ int main(int argc, char **argv)
     pthread_t *eThread = NULL;
 
     ResultsParams *resultsParams;
-    pthread_t *threads = (pthread_t *)smalloc(params->iterationsCount * sizeof(pthread_t));
+    pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
 
     CHECK(cudaEventRecord(eventE))
 
@@ -136,14 +104,14 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
         // Spawn copy thread
-        hCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         hCopyParams->xSource = field->hx;
         hCopyParams->ySource = field->hy;
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
 
-        hThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        hThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
@@ -167,14 +135,14 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz0, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
         // Spawn copy thread
-        dCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         dCopyParams->xSource = field->dx0;
         dCopyParams->ySource = field->dy0;
         dCopyParams->zSource = field->dz0;
         dCopyParams->params = params;
         dCopyParams->stream = streamD;
 
-        dThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        dThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
 
         // E field
@@ -203,18 +171,18 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez0, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
         // Spawn copy thread
-        eCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         eCopyParams->xSource = field->ex0;
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
         eCopyParams->stream = streamD;
 
-        eThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        eThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
-        resultsParams = (ResultsParams *)smalloc(sizeof(ResultsParams));
+        resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
@@ -246,14 +214,14 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
         // Spawn copy thread
-        hCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         hCopyParams->xSource = field->hx;
         hCopyParams->ySource = field->hy;
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
 
-        hThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        hThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
@@ -274,14 +242,14 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz1, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
         // Spawn copy thread
-        dCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         dCopyParams->xSource = field->dx0;
         dCopyParams->ySource = field->dy0;
         dCopyParams->zSource = field->dz0;
         dCopyParams->params = params;
         dCopyParams->stream = streamD;
 
-        dThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        dThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
  
         // E field
@@ -307,18 +275,18 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez1, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
         // Spawn copy thread
-        eCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         eCopyParams->xSource = field->ex0;
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
         eCopyParams->stream = streamD;
 
-        eThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        eThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
-        resultsParams = (ResultsParams *)smalloc(sizeof(ResultsParams));
+        resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
@@ -350,14 +318,14 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
         // Spawn copy thread
-        hCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         hCopyParams->xSource = field->hx;
         hCopyParams->ySource = field->hy;
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
 
-        hThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        hThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(hThread, NULL, copyResultsWithParams, hCopyParams);
 
         // D field
@@ -381,14 +349,14 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->dz0, deviceField->dz2, bytesCount, cudaMemcpyDeviceToHost, streamD))
 
         // Spawn copy thread
-        dCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        dCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         dCopyParams->xSource = field->dx0;
         dCopyParams->ySource = field->dy0;
         dCopyParams->zSource = field->dz0;
         dCopyParams->params = params;
         dCopyParams->stream = streamD;
 
-        dThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        dThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(dThread, NULL, copyResultsWithParams, dCopyParams);
             
         // E field
@@ -417,18 +385,18 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->ez0, deviceField->ez2, bytesCount, cudaMemcpyDeviceToHost, streamE))
 
         // Spawn copy thread
-        eCopyParams = (CopyParams *)smalloc(sizeof(CopyParams));
+        eCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         eCopyParams->xSource = field->ex0;
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
         eCopyParams->stream = streamD;
 
-        eThread = (pthread_t *)smalloc(sizeof(pthread_t));
+        eThread = (pthread_t *)malloc(sizeof(pthread_t));
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
-        resultsParams = (ResultsParams *)smalloc(sizeof(ResultsParams));
+        resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         resultsParams->params = params;
         resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
@@ -449,7 +417,7 @@ int main(int argc, char **argv)
     }
 
     // Clean up
-    //sfree(threads);
+    free(threads);
 
     deallocDeviceField(deviceField);
     deallocField(field);
@@ -459,9 +427,9 @@ int main(int argc, char **argv)
 
 FdtdParams *initParamsWithPath(const char *filePath)
 {
-    FdtdParams *params = (FdtdParams *)smalloc(sizeof(FdtdParams));
-    params->inputPath = (char *)smalloc(sizeof(char) * 1024);
-    params->outputPath = (char *)smalloc(sizeof(char) * 1024);
+    FdtdParams *params = (FdtdParams *)malloc(sizeof(FdtdParams));
+    params->inputPath = (char *)malloc(sizeof(char) * 1024);
+    params->outputPath = (char *)malloc(sizeof(char) * 1024);
 
     FILE *paramsFile = fopen(filePath, "r");
     //check(paramsFile != NULL, "Cannot open file");
@@ -511,7 +479,7 @@ FdtdParams *initParamsWithPath(const char *filePath)
     //number_of_excitation_sources
     fscanf(paramsFile, "%s %d\n", temp, &params->sourcesCount);
     //source_location
-    params->sources = (int *)smalloc(sizeof(int) * params->sourcesCount * 3);
+    params->sources = (int *)malloc(sizeof(int) * params->sourcesCount * 3);
     for(int i=0; i<params->sourcesCount; i++) {
         fscanf(paramsFile, "%s %d %d %d\n", temp,
                                             &params->sources[i*3 + 0],
@@ -552,9 +520,9 @@ FdtdParams *initParamsWithPath(const char *filePath)
 
 void deallocParams(FdtdParams *params)
 {
-    sfree(params->inputPath);
-    sfree(params->outputPath);
-    sfree(params);
+    free(params->inputPath);
+    free(params->outputPath);
+    free(params);
 }
 
 
@@ -591,7 +559,7 @@ FdtdField *initFieldWithParams(FdtdParams *params)
 {
     int n = params->nx * params->ny * params->nz; 
 
-    FdtdField *field = (FdtdField *)smalloc(sizeof(FdtdField));
+    FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
     if(field == NULL) {
         printf("Couldn't allocate field\n");
         exit(EXIT_FAILURE);
@@ -613,10 +581,10 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     CHECK(cudaHostAlloc(&field->ez0, n * sizeof(float), cudaHostAllocDefault))
 
     // sigma, eps, tau
-    field->sigma = (float *)smalloc( n * sizeof(float));
-    field->epsS  = (float *)smalloc( n * sizeof(float));
-    field->epsI  = (float *)smalloc( n * sizeof(float));
-    field->tauD  = (float *)smalloc( n * sizeof(float));
+    field->sigma = (float *)malloc( n * sizeof(float));
+    field->epsS  = (float *)malloc( n * sizeof(float));
+    field->epsI  = (float *)malloc( n * sizeof(float));
+    field->tauD  = (float *)malloc( n * sizeof(float));
 
     for(int i = 0; i < n; i++) {
         field->sigma[i] = params->defaultSigma;
@@ -626,13 +594,13 @@ FdtdField *initFieldWithParams(FdtdParams *params)
     }
 
     // rp
-    field->rpx0 = (float *)smalloc(2 * params->ny * params->nz * sizeof(float));
-    field->rpy0 = (float *)smalloc(params->nx * 2 * params->nz * sizeof(float)); 
-    field->rpz0 = (float *)smalloc(params->nx * params->ny * 2 * sizeof(float)); 
+    field->rpx0 = (float *)malloc(2 * params->ny * params->nz * sizeof(float));
+    field->rpy0 = (float *)malloc(params->nx * 2 * params->nz * sizeof(float)); 
+    field->rpz0 = (float *)malloc(params->nx * params->ny * 2 * sizeof(float)); 
 
-    field->rpxEnd = (float *)smalloc(2 * params->ny * params->nz * sizeof(float));
-    field->rpyEnd = (float *)smalloc(params->nx * 2 * params->nz * sizeof(float));
-    field->rpzEnd = (float *)smalloc(params->nx * params->ny * 2 * sizeof(float));  
+    field->rpxEnd = (float *)malloc(2 * params->ny * params->nz * sizeof(float));
+    field->rpyEnd = (float *)malloc(params->nx * 2 * params->nz * sizeof(float));
+    field->rpzEnd = (float *)malloc(params->nx * params->ny * 2 * sizeof(float));  
 
     return field;
 }
@@ -656,21 +624,21 @@ void deallocField(FdtdField *field)
     CHECK(cudaFreeHost(field->ez0));
 
     //sigma, eps, tau
-    sfree(field->sigma);
-    sfree(field->epsS);
-    sfree(field->epsI);
-    sfree(field->tauD);
+    free(field->sigma);
+    free(field->epsS);
+    free(field->epsI);
+    free(field->tauD);
 
     //rp
-    sfree(field->rpx0);
-    sfree(field->rpy0);
-    sfree(field->rpz0);
+    free(field->rpx0);
+    free(field->rpy0);
+    free(field->rpz0);
 
-    sfree(field->rpxEnd);
-    sfree(field->rpyEnd);
-    sfree(field->rpzEnd);
+    free(field->rpxEnd);
+    free(field->rpyEnd);
+    free(field->rpzEnd);
 
-    sfree(field);
+    free(field);
 }
 
 
@@ -678,7 +646,7 @@ FdtdField *initDeviceFieldWithParams(FdtdParams *params)
 {
     int n = params->nx * params->ny * params->nz; 
 
-    FdtdField *field = (FdtdField *)smalloc(sizeof(FdtdField));
+    FdtdField *field = (FdtdField *)malloc(sizeof(FdtdField));
 
     // e
     CHECK(cudaMalloc(&field->ex0, n * sizeof(float)))
@@ -816,7 +784,7 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
             break;
     }
 
-    //fclose(specsFile);
+    fclose(specsFile);
 
     // Load materials
     for(int iz=0; iz<params->nz; iz++) {
@@ -848,7 +816,7 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
         fclose(materialFile);
     }
 
-    //sfree(specs);
+    free(specs);
 }
 
 
@@ -990,8 +958,8 @@ void setupSources(FdtdParams *params)
         params->jz[i] = tmpdata2[i + tmpOff + 1];
     }
 
-    sfree(tmpdata2);
-    sfree(tmpdata);
+    free(tmpdata2);
+    free(tmpdata);
 }
 
 
@@ -1052,13 +1020,13 @@ void *copyResultsWithParams(void *params)
 
     int bytesCount = copyParams->params->nx * copyParams->params->ny * copyParams->params->nz * sizeof(float);
 
-    while((copyParams->xBuffer = (float *)smalloc(bytesCount)) == NULL)
+    while((copyParams->xBuffer = (float *)malloc(bytesCount)) == NULL)
         usleep(1000);
 
-    while((copyParams->yBuffer = (float *)smalloc(bytesCount)) == NULL)
+    while((copyParams->yBuffer = (float *)malloc(bytesCount)) == NULL)
         usleep(1000);
 
-    while((copyParams->zBuffer = (float *)smalloc(bytesCount)) == NULL)
+    while((copyParams->zBuffer = (float *)malloc(bytesCount)) == NULL)
         usleep(1000);
 
     CHECK(cudaStreamSynchronize(copyParams->stream))
@@ -1085,11 +1053,15 @@ void *writeResultsWithParams(void *params)
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
                  resultsParams->currentIteration);
 
-    sfree(resultsParams->hParams);
-    sfree(resultsParams->dParams);
-    sfree(resultsParams->eParams);
+    free(resultsParams->hParams);
+    free(resultsParams->dParams);
+    free(resultsParams->eParams);
+    
+    free(resultsParams->hThread);
+    free(resultsParams->dThread);
+    free(resultsParams->eThread);
 
-    sfree(params);
+    free(params);
 
     pthread_exit(NULL);
 }
@@ -1290,15 +1262,15 @@ void writeResults(FdtdParams *params, FdtdField *field,
 
 
     //Cleanup unnecessary buffers
-    sfree(hxSource);
-    sfree(hySource);
-    sfree(hzSource);
+    free(hxSource);
+    free(hySource);
+    free(hzSource);
 
-    sfree(dxSource);
-    sfree(dySource);
-    sfree(dzSource);
+    free(dxSource);
+    free(dySource);
+    free(dzSource);
 
-    sfree(exSource);
-    sfree(eySource);
-    sfree(ezSource);
+    free(exSource);
+    free(eySource);
+    free(ezSource);
 }
