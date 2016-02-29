@@ -5,6 +5,7 @@
 #include <math.h>
 #include <complex.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -14,6 +15,10 @@
 #define BLOCK_Y 1
 #define BLOCK_Z 1
 
+#define MAX_COPY_THREADS 3
+
+
+sem_t copySemaphore;
 
 int main(int argc, char **argv)
 {
@@ -76,6 +81,8 @@ int main(int argc, char **argv)
     pthread_t *hThread = NULL;
     pthread_t *dThread = NULL;
     pthread_t *eThread = NULL;
+
+    sem_init(&copySemaphore, 0, MAX_COPY_THREADS);
 
     ResultsParams *resultsParams;
     pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
@@ -1035,6 +1042,8 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 
 void *copyResultsWithParams(void *params)
 {
+    while (sem_wait(&copySemaphore) == -1 && errno == EINTR) {}
+
     CopyParams *copyParams = (CopyParams *)params;
 
     int bytesCount = copyParams->params->nx * copyParams->params->ny * copyParams->params->nz * sizeof(float);
@@ -1066,7 +1075,7 @@ void *writeResultsWithParams(void *params)
     pthread_join(*resultsParams->dThread, NULL);
     pthread_join(*resultsParams->eThread, NULL);
 
-    writeResults(resultsParams->params,
+    writeResults3d(resultsParams->params,
                  resultsParams->hParams->xBuffer, resultsParams->hParams->yBuffer, resultsParams->hParams->zBuffer,
                  resultsParams->dParams->xBuffer, resultsParams->dParams->yBuffer, resultsParams->dParams->zBuffer,
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
@@ -1081,6 +1090,8 @@ void *writeResultsWithParams(void *params)
     free(resultsParams->eThread);
 
     free(params);
+    
+    sem_post(&copySemaphore);
 
     pthread_exit(NULL);
 }
