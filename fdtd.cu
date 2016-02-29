@@ -192,7 +192,6 @@ int main(int argc, char **argv)
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
-        resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
         resultsParams->dParams = dCopyParams;
         resultsParams->eParams = eCopyParams;
@@ -303,7 +302,6 @@ int main(int argc, char **argv)
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
-        resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
         resultsParams->dParams = dCopyParams;
         resultsParams->eParams = eCopyParams;
@@ -420,7 +418,6 @@ int main(int argc, char **argv)
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
-        resultsParams->field = field;
         resultsParams->hParams = hCopyParams;
         resultsParams->dParams = dCopyParams;
         resultsParams->eParams = eCopyParams;
@@ -1069,7 +1066,7 @@ void *writeResultsWithParams(void *params)
     pthread_join(*resultsParams->dThread, NULL);
     pthread_join(*resultsParams->eThread, NULL);
 
-    writeResults(resultsParams->params, resultsParams->field,
+    writeResults(resultsParams->params,
                  resultsParams->hParams->xBuffer, resultsParams->hParams->yBuffer, resultsParams->hParams->zBuffer,
                  resultsParams->dParams->xBuffer, resultsParams->dParams->yBuffer, resultsParams->dParams->zBuffer,
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
@@ -1089,11 +1086,102 @@ void *writeResultsWithParams(void *params)
 }
 
 
-void writeResults(FdtdParams *params, FdtdField *field,
+void writeResults(FdtdParams *params,
                   float *hxSource, float *hySource, float *hzSource,
                   float *dxSource, float *dySource, float *dzSource,
                   float *exSource, float *eySource, float *ezSource,
                   int currentIteration)
+{
+    char outputFilePath[1024];
+    FILE *outputFile;
+
+    // Used by OFFSET macro
+    int nx = params->nx;
+    int ny = params->ny;
+
+    // Output x
+    sprintf(outputFilePath, "%s/E_field_x_%05d.out", params->outputPath, currentIteration + 1);
+
+    outputFile = fopen(outputFilePath, "w");
+    if(outputFile == NULL) {
+        printf("Couldn\'t open file %s\n", outputFilePath);
+        exit(EXIT_FAILURE);
+    }
+
+    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
+        int iy = params->sources[isrc * 3 + 1];
+        int iz = params->sources[isrc * 3 + 2];
+        for(int ix=0; ix < params->nx; ix++) {
+            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
+                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
+        }
+    }
+    fclose(outputFile);
+
+    // Output y
+    sprintf(outputFilePath, "%s/E_field_y_%05d.out", params->outputPath, currentIteration + 1);
+
+    outputFile = fopen(outputFilePath, "w");
+    if(outputFile == NULL) {
+        printf("Couldn\'t open file %s\n", outputFilePath);
+        exit(EXIT_FAILURE);
+    }
+
+    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
+        int ix = params->sources[isrc * 3 + 0];
+        int iz = params->sources[isrc * 3 + 2];
+        for(int iy=0; iy < params->ny; iy++) {
+            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
+                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
+        }
+    }
+    fclose(outputFile);
+
+    // Output z
+    sprintf(outputFilePath, "%s/E_field_z_%05d.out", params->outputPath, currentIteration + 1);
+
+    outputFile = fopen(outputFilePath, "w");
+    if(outputFile == NULL) {
+        printf("Couldn\'t open file %s\n", outputFilePath);
+        exit(EXIT_FAILURE);
+    }
+
+    for(int isrc=0; isrc < params->sourcesCount; isrc++) {
+        int ix = params->sources[isrc * 3 + 0];
+        int iy = params->sources[isrc * 3 + 1];
+        for(int iz=0; iz < params->nz; iz++) {
+            fprintf(outputFile, " %3d %3d %3d % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E % 9.3E\n", ix+1, iy+1, iz+1,
+                    OFFSET(dxSource, ix, iy, iz), OFFSET(dySource, ix, iy, iz), OFFSET(dzSource, ix, iy, iz),
+                    OFFSET(hxSource, ix, iy, iz), OFFSET(hySource, ix, iy, iz), OFFSET(hzSource, ix, iy, iz),
+                    OFFSET(exSource, ix, iy, iz), OFFSET(eySource, ix, iy, iz), OFFSET(ezSource, ix, iy, iz));
+        }
+    }
+    fclose(outputFile);
+
+    //Cleanup unnecessary buffers
+    free(hxSource);
+    free(hySource);
+    free(hzSource);
+
+    free(dxSource);
+    free(dySource);
+    free(dzSource);
+
+    free(exSource);
+    free(eySource);
+    free(ezSource);
+}
+
+
+void writeResults3d(FdtdParams *params,
+                    float *hxSource, float *hySource, float *hzSource,
+                    float *dxSource, float *dySource, float *dzSource,
+                    float *exSource, float *eySource, float *ezSource,
+                    int currentIteration)
 {
     char outputFilePath[1024];
     FILE *outputFile;
