@@ -14,7 +14,7 @@
 #define BLOCK_Y 1
 #define BLOCK_Z 1
 
-#define MAX_COPY_THREADS 7
+#define MAX_COPY_THREADS 3
 
 
 pthread_mutex_t copyThreadsCountMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -132,6 +132,8 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
 
+        copyThreadWait();
+
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
         if(hCopyParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -140,8 +142,6 @@ int main(int argc, char **argv)
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
-
-        copyThreadWait();
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
