@@ -5,7 +5,6 @@
 #include <math.h>
 #include <complex.h>
 #include <unistd.h>
-#include <semaphore.h>
 
 #include "utils.h"
 #include "fdtd_calculations.h"
@@ -18,7 +17,31 @@
 #define MAX_COPY_THREADS 3
 
 
-sem_t copySemaphore;
+pthread_mutex_t copyThreadsCountMutex = PTHREAD_MUTEX_INITIALIZER;
+int copyThreadsCount = 0;
+
+
+void copyThreadWait()
+{
+    while(true) {
+        pthread_mutex_lock(&copyThreadsCountMutex);
+        if (copyThreadsCount < MAX_COPY_THREADS) {
+            copyThreadsCount++;
+            pthread_mutex_unlock(&copyThreadsCountMutex);
+            return;
+        }
+        pthread_mutex_unlock(&copyThreadsCountMutex);
+    }
+}
+
+
+void copyThreadDone()
+{
+    pthread_mutex_lock(&copyThreadsCountMutex);
+    copyThreadsCount--;
+    pthread_mutex_unlock(&copyThreadsCountMutex);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -82,8 +105,6 @@ int main(int argc, char **argv)
     pthread_t *dThread = NULL;
     pthread_t *eThread = NULL;
 
-    sem_init(&copySemaphore, 0, MAX_COPY_THREADS);
-
     ResultsParams *resultsParams;
     pthread_t *threads = (pthread_t *)malloc(params->iterationsCount * sizeof(pthread_t));
     if(threads == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -119,6 +140,8 @@ int main(int argc, char **argv)
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
+
+        copyThreadWait();
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -226,6 +249,8 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hx, deviceField->hx, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
+
+        copyThreadWait();
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
@@ -336,6 +361,8 @@ int main(int argc, char **argv)
         CHECK(cudaMemcpyAsync(field->hx, deviceField->hx, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hy, deviceField->hy, bytesCount, cudaMemcpyHostToDevice, streamH));
         CHECK(cudaMemcpyAsync(field->hz, deviceField->hz, bytesCount, cudaMemcpyHostToDevice, streamH));
+
+        copyThreadWait();
 
         // Spawn copy thread
         hCopyParams = (CopyParams *)malloc(sizeof(CopyParams));
@@ -1042,8 +1069,6 @@ void copyDataToDevice(FdtdParams *params, FdtdField *field, FdtdField *deviceFie
 
 void *copyResultsWithParams(void *params)
 {
-    while (sem_wait(&copySemaphore) == -1 && errno == EINTR) {}
-
     CopyParams *copyParams = (CopyParams *)params;
 
     int bytesCount = copyParams->params->nx * copyParams->params->ny * copyParams->params->nz * sizeof(float);
@@ -1091,7 +1116,7 @@ void *writeResultsWithParams(void *params)
 
     free(params);
     
-    sem_post(&copySemaphore);
+    copyThreadDone();
 
     pthread_exit(NULL);
 }
