@@ -14,7 +14,7 @@
 #define BLOCK_Y 1
 #define BLOCK_Z 1
 
-#define MAX_COPY_THREADS 3
+#define MAX_COPY_THREADS 7
 
 
 pthread_mutex_t copyThreadsCountMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -114,8 +114,8 @@ int main(int argc, char **argv)
     // Main loop
     for(int i=0; i<params->iterationsCount; i += 3) {
 
-        // Run 0
-        printf("Running iteration %d\n", i);
+        // Run 1
+        printf("Running iteration %d\n", i+1);
 
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
@@ -212,13 +212,15 @@ int main(int argc, char **argv)
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
-        eCopyParams->stream = streamD;
+        eCopyParams->stream = streamE;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
+        printf("Writing results for iteration %d\n", i+1);
+
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
@@ -232,8 +234,8 @@ int main(int argc, char **argv)
 
         pthread_create(&threads[i], NULL, writeResultsWithParams, resultsParams);
 
-        // Run 1
-        printf("Running iteration %d\n", i+1);
+        // Run 2
+        printf("Running iteration %d\n", i+2);
 
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
@@ -324,13 +326,15 @@ int main(int argc, char **argv)
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
-        eCopyParams->stream = streamD;
+        eCopyParams->stream = streamE;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
+        printf("Writing results for iteration %d\n", i+2);
+
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
@@ -344,8 +348,8 @@ int main(int argc, char **argv)
 
         pthread_create(&threads[i+1], NULL, writeResultsWithParams, resultsParams);
 
-        // Run 2
-        printf("Running iteration %d\n", i+2);
+        // Run 3
+        printf("Running iteration %d\n", i+3);
 
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
@@ -442,13 +446,15 @@ int main(int argc, char **argv)
         eCopyParams->ySource = field->ey0;
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
-        eCopyParams->stream = streamD;
+        eCopyParams->stream = streamE;
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         pthread_create(eThread, NULL, copyResultsWithParams, eCopyParams);
 
         //Spawn write results thread
+        printf("Writing results for iteration %d\n", i+3);
+
         resultsParams = (ResultsParams *)malloc(sizeof(ResultsParams));
         if(resultsParams == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
         resultsParams->params = params;
@@ -1100,7 +1106,7 @@ void *writeResultsWithParams(void *params)
     pthread_join(*resultsParams->dThread, NULL);
     pthread_join(*resultsParams->eThread, NULL);
 
-    writeResults3d(resultsParams->params,
+    writeResults(resultsParams->params,
                  resultsParams->hParams->xBuffer, resultsParams->hParams->yBuffer, resultsParams->hParams->zBuffer,
                  resultsParams->dParams->xBuffer, resultsParams->dParams->yBuffer, resultsParams->dParams->zBuffer,
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
