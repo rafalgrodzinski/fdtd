@@ -837,7 +837,7 @@ void loadMaterials(FdtdParams *params, FdtdField *field, const char *specsFilePa
             break;
     }
 
-    fclose(specsFile);
+    //fclose(specsFile);
 
     // Load materials
     for(int iz=0; iz<params->nz; iz++) {
