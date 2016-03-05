@@ -66,6 +66,7 @@ typedef struct
 
     FdtdParams *params;
     cudaStream_t stream;
+    pthread_mutex_t *copyMutex;
 } CopyParams;
 
 
@@ -76,10 +77,6 @@ typedef struct
     CopyParams *hParams;
     CopyParams *dParams;
     CopyParams *eParams;
-
-    pthread_t *hThread;
-    pthread_t *dThread;
-    pthread_t *eThread;
 
     int currentIteration;
 } ResultsParams;

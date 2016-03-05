@@ -120,8 +120,11 @@ int main(int argc, char **argv)
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
 
-        if(hThread != NULL)
+        if(hThread != NULL) {
             pthread_join(*hThread, NULL);
+            free(hThread);
+            hThread = NULL;
+        }
 
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex2, deviceField->ey2, deviceField->ez2);
@@ -142,6 +145,10 @@ int main(int argc, char **argv)
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
+        hCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(hCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(hCopyParams->copyMutex);
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -150,8 +157,11 @@ int main(int argc, char **argv)
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
 
-        if(dThread != NULL)
+        if(dThread != NULL) {
             pthread_join(*dThread, NULL);
+            free(dThread);
+            dThread = NULL;
+        }
 
         updateDField<<<gridSize, blockSize, 0, streamD>>>(deviceField->dx0, deviceField->dy0, deviceField->dz0, 
                                                           deviceField->dx2, deviceField->dy2, deviceField->dz2, 
@@ -175,6 +185,10 @@ int main(int argc, char **argv)
         dCopyParams->zSource = field->dz0;
         dCopyParams->params = params;
         dCopyParams->stream = streamD;
+        dCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(dCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(dCopyParams->copyMutex);
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(dThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -183,8 +197,11 @@ int main(int argc, char **argv)
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
 
-        if(eThread != NULL)
+        if(eThread != NULL) {
             pthread_join(*eThread, NULL);
+            free(eThread);
+            eThread = NULL;
+        }
 
         updateEField<<<gridSize, blockSize, 0, streamE>>>(deviceField->ex0, deviceField->ey0, deviceField->ez0, 
                                                           deviceField->ex2, deviceField->ey2, deviceField->ez2, 
@@ -213,6 +230,10 @@ int main(int argc, char **argv)
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
         eCopyParams->stream = streamE;
+        eCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(eCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(eCopyParams->copyMutex);
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -227,9 +248,6 @@ int main(int argc, char **argv)
         resultsParams->hParams = hCopyParams;
         resultsParams->dParams = dCopyParams;
         resultsParams->eParams = eCopyParams;
-        resultsParams->hThread = hThread;
-        resultsParams->dThread = dThread;
-        resultsParams->eThread = eThread;
         resultsParams->currentIteration = i;
 
         pthread_create(&threads[i], NULL, writeResultsWithParams, resultsParams);
@@ -240,8 +258,11 @@ int main(int argc, char **argv)
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
 
-        if(hThread != NULL)
+        if(hThread != NULL) {
             pthread_join(*hThread, NULL);
+            free(hThread);
+            hThread = NULL;
+        }
 
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex0, deviceField->ey0, deviceField->ez0);
@@ -262,6 +283,10 @@ int main(int argc, char **argv)
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
+        hCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(hCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(hCopyParams->copyMutex);
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -269,6 +294,12 @@ int main(int argc, char **argv)
 
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
+        
+        if(dThread != NULL) {
+            pthread_join(*dThread, NULL);
+            free(dThread);
+            dThread = NULL;
+        }
 
         updateDField<<<gridSize, blockSize, 0, streamD>>>(deviceField->dx1, deviceField->dy1, deviceField->dz1, 
                                                           deviceField->dx0, deviceField->dy0, deviceField->dz0, 
@@ -292,6 +323,10 @@ int main(int argc, char **argv)
         dCopyParams->zSource = field->dz0;
         dCopyParams->params = params;
         dCopyParams->stream = streamD;
+        dCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(dCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(dCopyParams->copyMutex);
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(dThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -299,6 +334,12 @@ int main(int argc, char **argv)
  
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
+        
+        if(eThread != NULL) {
+            pthread_join(*eThread, NULL);
+            free(eThread);
+            eThread = NULL;
+        }
 
         updateEField<<<gridSize, blockSize, 0, streamE>>>(deviceField->ex1, deviceField->ey1, deviceField->ez1,
                                                           deviceField->ex0, deviceField->ey0, deviceField->ez0,
@@ -327,6 +368,10 @@ int main(int argc, char **argv)
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
         eCopyParams->stream = streamE;
+        eCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(eCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(eCopyParams->copyMutex);
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -341,9 +386,6 @@ int main(int argc, char **argv)
         resultsParams->hParams = hCopyParams;
         resultsParams->dParams = dCopyParams;
         resultsParams->eParams = eCopyParams;
-        resultsParams->hThread = hThread;
-        resultsParams->dThread = dThread;
-        resultsParams->eThread = eThread;
         resultsParams->currentIteration = i+1;
 
         pthread_create(&threads[i+1], NULL, writeResultsWithParams, resultsParams);
@@ -354,8 +396,11 @@ int main(int argc, char **argv)
         // H field
         CHECK(cudaStreamWaitEvent(streamH, eventE, 0));
 
-        if(hThread != NULL)
+        if(hThread != NULL) {
             pthread_join(*hThread, NULL);
+            free(hThread);
+            hThread = NULL;
+        }
 
         updateHField<<<gridSize, blockSize, 0, streamH>>>(deviceField->hx,  deviceField->hy,  deviceField->hz,                    
                                                           deviceField->ex1, deviceField->ey1, deviceField->ez1);
@@ -376,6 +421,10 @@ int main(int argc, char **argv)
         hCopyParams->zSource = field->hz;
         hCopyParams->params = params;
         hCopyParams->stream = streamH;
+        hCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(hCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(hCopyParams->copyMutex);
 
         hThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(hThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -384,8 +433,11 @@ int main(int argc, char **argv)
         // D field
         CHECK(cudaStreamWaitEvent(streamD, eventH, 0));
 
-        if(dThread != NULL)
+        if(dThread != NULL) {
             pthread_join(*dThread, NULL);
+            free(dThread);
+            dThread = NULL;
+        }
 
         updateDField<<<gridSize, blockSize, 0, streamD>>>(deviceField->dx2, deviceField->dy2, deviceField->dz2, 
                                                           deviceField->dx1, deviceField->dy1, deviceField->dz1, 
@@ -409,6 +461,10 @@ int main(int argc, char **argv)
         dCopyParams->zSource = field->dz0;
         dCopyParams->params = params;
         dCopyParams->stream = streamD;
+        dCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(dCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(dCopyParams->copyMutex);
 
         dThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(dThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -417,8 +473,11 @@ int main(int argc, char **argv)
         // E field
         CHECK(cudaStreamWaitEvent(streamE, eventD, 0));
 
-        if(eThread != NULL)
+        if(eThread != NULL) {
             pthread_join(*eThread, NULL);
+            free(eThread);
+            eThread = NULL;
+        }
 
         updateEField<<<gridSize, blockSize, 0, streamE>>>(deviceField->ex2, deviceField->ey2, deviceField->ez2, 
                                                           deviceField->ex1, deviceField->ey1, deviceField->ez1, 
@@ -447,6 +506,10 @@ int main(int argc, char **argv)
         eCopyParams->zSource = field->ez0;
         eCopyParams->params = params;
         eCopyParams->stream = streamE;
+        eCopyParams->copyMutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+        pthread_mutex_init(eCopyParams->copyMutex, NULL);
+        
+        pthread_mutex_lock(eCopyParams->copyMutex);
 
         eThread = (pthread_t *)malloc(sizeof(pthread_t));
         if(eThread == NULL) {printf("mem %ld\n", (long)__LINE__);exit(EXIT_FAILURE);}
@@ -461,9 +524,6 @@ int main(int argc, char **argv)
         resultsParams->hParams = hCopyParams;
         resultsParams->dParams = dCopyParams;
         resultsParams->eParams = eCopyParams;
-        resultsParams->hThread = hThread;
-        resultsParams->dThread = dThread;
-        resultsParams->eThread = eThread;
         resultsParams->currentIteration = i+2;
 
         pthread_create(&threads[i+2], NULL, writeResultsWithParams, resultsParams);
@@ -1093,6 +1153,8 @@ void *copyResultsWithParams(void *params)
     memcpy(copyParams->xBuffer, copyParams->xSource, bytesCount);
     memcpy(copyParams->yBuffer, copyParams->ySource, bytesCount);
     memcpy(copyParams->zBuffer, copyParams->zSource, bytesCount);
+    
+    pthread_mutex_unlock(copyParams->copyMutex);
 
     pthread_exit(NULL);
 }
@@ -1102,23 +1164,27 @@ void *writeResultsWithParams(void *params)
 {
     ResultsParams *resultsParams = (ResultsParams *)params;
 
-    pthread_join(*resultsParams->hThread, NULL);
-    pthread_join(*resultsParams->dThread, NULL);
-    pthread_join(*resultsParams->eThread, NULL);
+    pthread_mutex_lock(resultsParams->hParams->copyMutex);
+    pthread_mutex_lock(resultsParams->dParams->copyMutex);
+    pthread_mutex_lock(resultsParams->eParams->copyMutex);
 
     writeResults(resultsParams->params,
                  resultsParams->hParams->xBuffer, resultsParams->hParams->yBuffer, resultsParams->hParams->zBuffer,
                  resultsParams->dParams->xBuffer, resultsParams->dParams->yBuffer, resultsParams->dParams->zBuffer,
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
                  resultsParams->currentIteration);
+                 
+    pthread_mutex_unlock(resultsParams->hParams->copyMutex);
+    pthread_mutex_unlock(resultsParams->dParams->copyMutex);
+    pthread_mutex_unlock(resultsParams->eParams->copyMutex);
+    
+    free(resultsParams->hParams->copyMutex);
+    free(resultsParams->dParams->copyMutex);
+    free(resultsParams->eParams->copyMutex);
 
     free(resultsParams->hParams);
     free(resultsParams->dParams);
     free(resultsParams->eParams);
-    
-    free(resultsParams->hThread);
-    free(resultsParams->dThread);
-    free(resultsParams->eThread);
 
     free(params);
     
