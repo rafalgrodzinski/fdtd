@@ -14,7 +14,7 @@
 #define BLOCK_Y 1
 #define BLOCK_Z 1
 
-#define MAX_COPY_THREADS 3
+#define MAX_COPY_THREADS 7
 
 
 pthread_mutex_t copyThreadsCountMutex = PTHREAD_MUTEX_INITIALIZER;

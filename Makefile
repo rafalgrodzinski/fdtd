@@ -14,3 +14,9 @@ run: fdtd
 
 prof: fdtd
 	if [ ! -d output ]; then mkdir output; fi; if [ -f fdtd_prof ]; then rm fdtd_prof; fi; pjsub run_fdtd_prof-rafal.sh
+
+prof1: fdtd
+	if [ ! -d output ]; then mkdir output; fi; if [ -f fdtd_prof ]; then rm fdtd_prof; fi; pjsub run_fdtd_prof1-rafal.sh
+
+prof2: fdtd
+	if [ ! -d output ]; then mkdir output; fi; if [ -f fdtd_prof ]; then rm fdtd_prof; fi; pjsub run_fdtd_prof2-rafal.sh
