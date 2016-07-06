@@ -1168,7 +1168,7 @@ void *writeResultsWithParams(void *params)
     pthread_mutex_lock(resultsParams->dParams->copyMutex);
     pthread_mutex_lock(resultsParams->eParams->copyMutex);
 
-    writeResults(resultsParams->params,
+    writeResults3d(resultsParams->params,
                  resultsParams->hParams->xBuffer, resultsParams->hParams->yBuffer, resultsParams->hParams->zBuffer,
                  resultsParams->dParams->xBuffer, resultsParams->dParams->yBuffer, resultsParams->dParams->zBuffer,
                  resultsParams->eParams->xBuffer, resultsParams->eParams->yBuffer, resultsParams->eParams->zBuffer,
@@ -1310,7 +1310,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(hxSource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(hxSource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1330,7 +1330,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(hySource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(hySource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1350,7 +1350,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(hzSource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(hzSource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1370,7 +1370,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(dxSource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(dxSource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1390,7 +1390,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(dySource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(dySource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1410,7 +1410,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(dzSource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(dzSource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1430,7 +1430,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(exSource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(exSource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1450,7 +1450,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(eySource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(eySource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }
@@ -1470,7 +1470,7 @@ void writeResults3d(FdtdParams *params,
 
         for(int iy = 0; iy < params->ny; iy++) {
             for(int ix=0; ix < params->nx; ix++)
-                fprintf(outputFile, "% 9.3E", OFFSET(ezSource, ix, iy, iz));
+                fprintf(outputFile, " % 9.3E", OFFSET(ezSource, ix, iy, iz));
             
             fprintf(outputFile, "\n");
         }

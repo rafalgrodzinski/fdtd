@@ -6,6 +6,6 @@
 #PJM -L vnode-core=8
 #PJM -x gpu_per_vnode=1
 #PJM -j
-#PJM -L elapse=10:00:00
+#PJM -L elapse=2:00:00
 
-/gwfefs/opt/x86_64/cuda/7.5/bin/nvprof --metrics achieved_occupancy,gld_efficiency,gld_throughput,gst_efficiency,gst_throughput,tex_cache_throughput ./fdtd
+time /gwfefs/opt/x86_64/cuda/7.5/bin/nvprof --metrics achieved_occupancy,gld_efficiency,gld_throughput,gst_efficiency,gst_throughput,tex_cache_throughput ./fdtd
